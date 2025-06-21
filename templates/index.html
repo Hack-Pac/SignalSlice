@@ -29,7 +29,6 @@
                 <a href="#settings" class="nav-link">Settings</a>
             </nav>
             <div class="status-indicator">
-                <div class="status-dot pulsing"></div>
                 <span>LIVE</span>
             </div>
         </div>
@@ -66,7 +65,6 @@
                     <div class="stat-content">
                         <div class="stat-value">23</div>
                         <div class="stat-label">Successful Predictions</div>
-                        <div class="stat-sublabel">91.3% accuracy</div>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -91,7 +89,6 @@
                     <div class="alert-timestamp">2 minutes ago</div>
                 </div>
             </div>
-        </section>
 
         <div class="container">
             <div class="dashboard-grid">
@@ -153,7 +150,6 @@
                         </div>
                         <canvas id="distributionChart"></canvas>
                     </div>
-                </section>
 
                 <!-- Analytics Panel -->
                 <section class="analytics-panel">
@@ -168,7 +164,6 @@
                     
                     <div class="analysis-cards">
                         <div class="analysis-card">
-                            <div class="analysis-header">
                                 <i class="fas fa-trending-up text-danger"></i>
                                 <span>Anomaly Detection</span>
                             </div>
@@ -179,7 +174,6 @@
                                         <span>Critical Event</span>
                                         <div class="prob-bar">
                                             <div class="prob-fill critical" style="width: 73%"></div>
-                                        </div>
                                         <span>73%</span>
                                     </div>
                                     <div class="prob-item">
@@ -200,7 +194,6 @@
                             </div>
                         </div>
 
-                        <div class="analysis-card">
                             <div class="analysis-header">
                                 <i class="fas fa-clock text-warning"></i>
                                 <span>Time Pattern Analysis</span>
@@ -209,7 +202,6 @@
                                 <div class="time-heatmap">
                                     <!-- This would be populated by JS -->
                                 <p><strong>Anomaly window:</strong> Currently active</p>
-                        </div>
                     </div>
                 </section>
 
@@ -219,12 +211,10 @@
                         <h3><i class="fas fa-database"></i> Data Sources</h3>
                     </div>
                     <div class="source-grid">
-                        <div class="source-card active">
                             <div class="source-header">
                                 <i class="fab fa-google"></i>
                                 <span>Google Maps API</span>
                                 <div class="status-dot online"></div>
-                            </div>
                             <div class="source-stats">
                                 <span>87 locations • Updated 2min ago</span>
                             </div>
@@ -259,7 +249,6 @@
                         </div>
                     </div>
                 </section>
-
                 <!-- Recent Events -->
                 <section class="recent-events">
                     <div class="section-header">
@@ -273,7 +262,6 @@
                         <div class="event-item warning">
                             <div class="event-time">11:23 PM</div>
                             <div class="event-content">
-                                <div class="event-title">🟡 Elevated activity at Domino's Pentagon City</div>
                                 <div class="event-desc">Order frequency increased 340% in last 30 minutes</div>
                             </div>
                         <div class="event-item normal">
@@ -292,13 +280,11 @@
                         </div>
                 </section>
             </div>
-        </div>
     </main>
 
     <!-- Floating Action Button -->
     <div class="fab">
         <button class="fab-button" id="fab-main">
-            <i class="fas fa-plus"></i>
         </button>
         <div class="fab-menu">
             <button class="fab-item" data-action="alert">
@@ -313,53 +299,8 @@
             </button>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
