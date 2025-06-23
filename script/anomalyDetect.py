@@ -3,7 +3,7 @@ import csv
 import os
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 THRESHOLD = 25  # how much higher than baseline to consider an anomaly
@@ -30,11 +30,20 @@ def check_current_anomalies():
     current_weekday = current_time_est.strftime('%A')
     current_hour = str(current_time_est.hour)
     
-    # Also show local time for debugging
-    local_time = datetime.now()
-    print(f"🌍 Local time: {local_time.strftime('%A %I:%M %p')}")
-    print(f"🕐 Current EST time: {current_time_est.strftime('%A %I:%M %p')} (Hour {current_hour})")
-    print(f"📅 Checking anomalies for {current_weekday} at {current_hour}:00\n")
+    # Adjust for Google Maps' day structure: 12 AM belongs to previous day
+    if current_time_est.hour == 0:
+        # 12 AM belongs to previous day
+        baseline_weekday = (current_time_est - timedelta(days=1)).strftime('%A')
+        baseline_hour = "24"  # Treat as hour 24 of previous day
+        print(f"🌍 Local time: {datetime.now().strftime('%A %I:%M %p')}")
+        print(f"🕐 Current EST time: {current_time_est.strftime('%A %I:%M %p')} (Hour {current_hour})")
+        print(f"📅 Checking anomalies for PREVIOUS day ({baseline_weekday}) at hour 24 (12 AM)\n")
+    else:
+        baseline_weekday = current_weekday
+        baseline_hour = current_hour
+        print(f"🌍 Local time: {datetime.now().strftime('%A %I:%M %p')}")
+        print(f"🕐 Current EST time: {current_time_est.strftime('%A %I:%M %p')} (Hour {current_hour})")
+        print(f"📅 Checking anomalies for {baseline_weekday} at {baseline_hour}:00\n")
 
     # Load the baseline
     baseline_path = os.path.join(os.path.dirname(__file__), "..", "baseline.json")
@@ -56,28 +65,39 @@ def check_current_anomalies():
     with open(current_hour_file, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            if not row["busyness_percent"]:
+            print(f"📊 Processing row: {row['restaurant_url']}")
+            print(f"   Raw busyness_percent: '{row['busyness_percent']}'")
+            print(f"   Value field: '{row['value']}'")
+            print(f"   Data weekday: {row['weekday']}")
+            
+            # Skip rows with no busyness data
+            if not row["busyness_percent"] or row["busyness_percent"] == "None":
+                print(f"ℹ️ No busyness data available for {row['restaurant_url']} at this hour")
                 continue
                 
             current = int(row["busyness_percent"])
-            expected = baseline.get(current_weekday, {}).get(current_hour)
+            expected = baseline.get(baseline_weekday, {}).get(baseline_hour)
+            
+            print(f"   Current busyness: {current}%")
+            print(f"   Expected baseline ({baseline_weekday} hour {baseline_hour}): {expected}%")
 
             if expected is None:
-                print(f"⚠️ No baseline for {current_weekday} {current_hour}:00")
+                print(f"⚠️ No baseline for {baseline_weekday} {baseline_hour}:00")
                 continue
 
             diff = current - expected
-            data_type = "LIVE" if "LIVE DATA" in row["value"] else "HISTORICAL"
+            print(f"   Difference: {diff}% (threshold: {THRESHOLD}%)")
             
             if diff >= THRESHOLD:
                 print(f"🚨 ANOMALY DETECTED at {row['restaurant_url']}")
-                print(f"    📅 {current_weekday} {current_hour}:00")
+                print(f"    📅 {baseline_weekday} {baseline_hour}:00")
                 print(f"    📊 Current: {current}% | Baseline: {expected}% | Δ: +{diff}%")
-                print(f"    🔴 Data type: {data_type}")
                 print(f"    🕐 Detected at: {current_time_est.strftime('%Y-%m-%d %H:%M:%S EST')}\n")
                 anomalies_found = True
             else:
-                print(f"✅ Normal activity at {row['restaurant_url']}: {current}% (baseline: {expected}%) [{data_type}]")
+                print(f"✅ Normal activity at {row['restaurant_url']}: {current}% (baseline: {expected}%)")
+            
+            print()  # Add blank line between restaurants
 
     return anomalies_found
 
