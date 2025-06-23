@@ -97,9 +97,8 @@ async def scrape_current_hour():
     
     # Adjust for Google Maps' day structure: 12 AM belongs to previous day
     if current_hour_24 == 0:
-        # 12 AM belongs to previous day as hour 24
         target_weekday = (current_time - timedelta(days=1)).strftime('%A')
-        target_hour = 24  # Treat as hour 24 of previous day
+        target_hour = 24
         print(f"🕐 Current EST time: {current_time.strftime('%A %I:%M %p')} (Hour {current_hour_24})")
         print(f"📅 Looking for PREVIOUS day's ({target_weekday}) data at hour 24 (12 AM)")
         print(f"🔍 Logic: 12 AM on {current_weekday} = Hour 24 of {target_weekday}")
@@ -109,8 +108,10 @@ async def scrape_current_hour():
         print(f"🕐 Current EST time: {current_time.strftime('%A %I:%M %p')} (Hour {current_hour_24})")
         print(f"📅 Looking for TODAY's ({target_weekday}) data at hour {target_hour}")
     
+    print(f"🎯 Priority: LIVE data > Historical data > No data")
+    
     results = []
-    all_scraped_data = []  # Store all scraped data for CSV output
+    all_scraped_data = []
     
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -123,192 +124,265 @@ async def scrape_current_hour():
                 await page.goto(url, timeout=60000)
                 await page.wait_for_timeout(4000)
 
-                # Get all Popular Times elements
-                elements = await page.query_selector_all('div[aria-label*="Popular times"] [aria-label*="at"]')
-                print(f"  📊 Found {len(elements)} total time elements")
+                # STEP 1: Look for LIVE data first
+                print(f"  🔴 Step 1: Searching for LIVE data...")
+                live_data = None
                 
-                # Parse all time data first
-                all_time_data = []
-                for i, el in enumerate(elements):
-                    aria = await el.get_attribute('aria-label')
-                    if not aria or not re.search(r"\d+% busy", aria):
-                        continue
-                    
-                    # Extract hour from aria-label
-                    time_match = re.search(r"at (\d{1,2})\u202f(AM|PM)\.?", aria)
-                    if not time_match:
-                        time_match = re.search(r"at (\d{1,2}) (AM|PM)\.?", aria)
-                    
-                    if time_match:
-                        hour_12 = int(time_match.group(1))
-                        meridiem = time_match.group(2)
-                        
-                        # Convert to 24-hour format
-                        if meridiem == "AM":
-                            hour_24 = hour_12 if hour_12 != 12 else 0
-                        else:  # PM
-                            hour_24 = hour_12 if hour_12 == 12 else hour_12 + 12
-                        
-                        # Convert hour 0 to hour 24 for Google Maps logic
-                        display_hour = 24 if hour_24 == 0 else hour_24
-                        
-                        # Extract busyness percentage
-                        percent_match = re.search(r"(\d+)%", aria)
-                        busyness_percent = int(percent_match.group(1)) if percent_match else None
-                        
-                        data_entry = {
-                            "scrape_timestamp": current_time.isoformat(),
-                            "restaurant_url": url,
-                            "element_index": i,
-                            "hour_24": hour_24,
-                            "display_hour": display_hour,  # Hour 24 for 12 AM
-                            "hour_12": hour_12,
-                            "meridiem": meridiem,
-                            "hour_label": f"{hour_12} {meridiem}",
-                            "busyness_percent": busyness_percent,
-                            "raw_aria_label": aria,
-                            "is_target_hour": display_hour == target_hour,
-                            "target_weekday": target_weekday,
-                            "target_hour": target_hour
+                # Look for live text indicators first
+                live_text_patterns = {
+                    r"busier than usual": {"flag": True, "confidence": "HIGH", "estimated_percentage": 75},
+                    r"as busy as it gets": {"flag": True, "confidence": "MAXIMUM", "estimated_percentage": 100},
+                    r"not busy": {"flag": False, "confidence": "LOW", "estimated_percentage": 10},
+                    r"not too busy": {"flag": False, "confidence": "LOW", "estimated_percentage": 15},
+                    r"usually not busy": {"flag": False, "confidence": "LOW", "estimated_percentage": 15},
+                }
+                
+                # Get all text content from the page
+                page_text = await page.evaluate('document.body.innerText')
+                print(f"    📝 Scanning page text for live indicators...")
+                
+                live_text_indicator = None
+                for pattern, info in live_text_patterns.items():
+                    if re.search(pattern, page_text, re.IGNORECASE):
+                        live_text_indicator = {
+                            "text": pattern,
+                            "flag": info["flag"],
+                            "confidence": info["confidence"],
+                            "estimated_percentage": info["estimated_percentage"]
                         }
-                        
-                        all_time_data.append(data_entry)
-                        all_scraped_data.append(data_entry)  # Add to global scraped data
-
-                if not all_time_data:
-                    print("  ❌ No time data found")
-                    continue
-
-                # Debug: Show raw hour sequence before cycle detection
-                hour_sequence = [d["display_hour"] for d in all_time_data]
-                print(f"  📋 Raw hour sequence: {hour_sequence}")
-
-                # Detect day cycles based on hour patterns
-                day_cycles = []
-                current_cycle = []
-                
-                print(f"  🔄 Analyzing hour cycles to detect days...")
-                print(f"     Looking for 6 AM to mark new day boundaries...")
-                
-                for idx, data in enumerate(all_time_data):
-                    hour = data["hour_24"]
-                    
-                    # If we see hour 6 (6 AM) and we already have data, start a new cycle
-                    if hour == 6 and current_cycle:
-                        print(f"    📅 Day boundary detected at element {data['element_index']} (6 AM)")
-                        print(f"       Previous cycle had {len(current_cycle)} hours: {[d['display_hour'] for d in current_cycle]}")
-                        day_cycles.append(current_cycle)
-                        current_cycle = []
-                    
-                    current_cycle.append(data)
-
-                # Add the last cycle
-                if current_cycle:
-                    print(f"    📅 Final cycle has {len(current_cycle)} hours: {[d['display_hour'] for d in current_cycle]}")
-                    day_cycles.append(current_cycle)
-
-                print(f"  📊 Detected {len(day_cycles)} day cycles total")
-                
-                # FIXED: Better day assignment logic
-                # Google Maps typically shows data starting from several days ago up to today
-                # The pattern appears to be: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
-                # But the first cycle (index 0) is actually Monday (today), not Sunday
-                
-                print(f"  📅 Assigning day names to cycles...")
-                print(f"     Current day: {current_weekday}")
-                print(f"     Target day for search: {target_weekday}")
-                
-                # Calculate what day each cycle should represent
-                # Based on the CSV data, cycle 0 = Monday (today), so we need to work backwards
-                day_names = {}
-                
-                # Find today's cycle by looking for the target weekday's position in the week
-                weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                current_day_index = weekdays.index(current_weekday)
-                
-                # Assign days to cycles assuming cycle 0 represents today (Monday)
-                for cycle_idx in range(len(day_cycles)):
-                    # Calculate the day offset from today
-                    # cycle 0 = today (Monday), cycle 1 = tomorrow (Tuesday), etc.
-                    # but we need to wrap around the week
-                    day_offset = cycle_idx
-                    actual_day_index = (current_day_index + day_offset) % 7
-                    day_names[cycle_idx] = weekdays[actual_day_index]
-                    
-                    # Update cycle assignment in scraped data
-                    cycle = day_cycles[cycle_idx]
-                    cycle_hours = sorted(set(d["display_hour"] for d in cycle))
-                    
-                    for data in cycle:
-                        data["detected_cycle"] = cycle_idx
-                        data["cycle_hours_count"] = len(cycle_hours)
-                        data["cycle_start_hour"] = min(cycle_hours) if cycle_hours else None
-                        data["cycle_end_hour"] = max(cycle_hours) if cycle_hours else None
-                        data["assigned_weekday"] = day_names[cycle_idx]
-                        data["day_offset"] = day_offset
-                        data["is_today_cycle"] = cycle_idx == 0  # Cycle 0 is today
-                    
-                    print(f"    Cycle {cycle_idx} = {day_names[cycle_idx]} (today + {day_offset} days)")
-                    print(f"       Hours: {cycle_hours}")
-
-                # Find target data
-                target_data = None
-                print(f"  🎯 Searching for {target_weekday} hour {target_hour}...")
-                
-                for cycle_idx, cycle in enumerate(day_cycles):
-                    cycle_day_name = day_names.get(cycle_idx, "Unknown")
-                    cycle_hours = [d["display_hour"] for d in cycle]
-                    
-                    print(f"    Checking Cycle {cycle_idx} ({cycle_day_name})")
-                    print(f"       Available hours: {sorted(set(cycle_hours))}")
-                    
-                    # Check if this cycle matches our target day and contains our target hour
-                    if cycle_day_name == target_weekday:
-                        print(f"    ✅ Found target day cycle {cycle_idx} ({target_weekday})")
-                        for data in cycle:
-                            data["is_target_cycle"] = True
-                            if data["display_hour"] == target_hour:
-                                target_data = {
-                                    "restaurant_url": url,
-                                    "weekday": target_weekday,
-                                    "hour_24": current_hour_24,  # Use actual current hour for filename
-                                    "hour_label": f"{data['hour_12']} {data['meridiem']}",
-                                    "timestamp": current_time.isoformat(),
-                                    "value": data["raw_aria_label"] + f" ({target_weekday} Hour {target_hour} - Cycle {cycle_idx})",
-                                    "busyness_percent": data["busyness_percent"]
-                                }
-                                data["selected_as_target"] = True
-                                print(f"      🎯 FOUND target data: {data['busyness_percent']}% at {data['hour_12']} {data['meridiem']} on {target_weekday}")
-                                break
+                        flag_emoji = "🚨" if info["flag"] else "✅"
+                        print(f"    {flag_emoji} FOUND LIVE TEXT: '{pattern}' (Flag: {info['flag']}, Confidence: {info['confidence']})")
                         break
-                    else:
-                        for data in cycle:
-                            data["is_target_cycle"] = False
-                        print(f"       ❌ Not target day (looking for {target_weekday})")
+                
+                # Look for live percentage data
+                live_percentage_selectors = [
+                    '[aria-label*="% busy"], [aria-label*="% Busy"]',
+                    '[aria-label*="right now"], [aria-label*="Right now"]',
+                    '[aria-label*="currently"], [aria-label*="Currently"]',
+                ]
+                
+                for selector in live_percentage_selectors:
+                    try:
+                        elements = await page.query_selector_all(selector)
+                        print(f"    📊 Checking selector '{selector}': found {len(elements)} elements")
+                        
+                        for el in elements:
+                            aria = await el.get_attribute('aria-label')
+                            if not aria:
+                                continue
+                                
+                            print(f"      Examining: {aria}")
+                            
+                            # Look for live data patterns (busyness % without time reference)
+                            if re.search(r"\d+% busy", aria, re.IGNORECASE) and "at" not in aria.lower():
+                                percent_match = re.search(r"(\d+)%", aria)
+                                if percent_match:
+                                    live_percentage = int(percent_match.group(1))
+                                    live_data = {
+                                        "restaurant_url": url,
+                                        "weekday": target_weekday,
+                                        "hour_24": current_hour_24,
+                                        "hour_label": f"{current_hour_24 % 12 or 12} {'AM' if current_hour_24 < 12 else 'PM'}",
+                                        "timestamp": current_time.isoformat(),
+                                        "value": f"{aria} (LIVE DATA - {current_time.strftime('%I:%M %p')})",
+                                        "busyness_percent": live_percentage,
+                                        "data_type": "LIVE"
+                                    }
+                                    print(f"      🔴 FOUND LIVE PERCENTAGE: {live_percentage}% busy right now!")
+                                    break
+                        
+                        if live_data:
+                            break
+                    except Exception as e:
+                        print(f"        Error with selector {selector}: {e}")
+                
+                # If we found text indicator but no percentage, use text indicator
+                if not live_data and live_text_indicator:
+                    live_data = {
+                        "restaurant_url": url,
+                        "weekday": target_weekday,
+                        "hour_24": current_hour_24,
+                        "hour_label": f"{current_hour_24 % 12 or 12} {'AM' if current_hour_24 < 12 else 'PM'}",
+                        "timestamp": current_time.isoformat(),
+                        "value": f"Live text indicator: '{live_text_indicator['text']}' (LIVE DATA - {current_time.strftime('%I:%M %p')})",
+                        "busyness_percent": live_text_indicator["estimated_percentage"],
+                        "data_type": "LIVE",
+                        "live_flag": live_text_indicator["flag"],
+                        "confidence": live_text_indicator["confidence"]
+                    }
 
-                # Add the data we found (if any)
-                if target_data:
-                    results.append(target_data)
-                    print(f"✅ Using {target_weekday} data: {target_data['busyness_percent']}%")
-                else:
-                    print(f"⚠️ No data found for {target_weekday} at hour {target_hour}")
-                    print(f"   Available cycles: {list(day_names.values())}")
+                # STEP 2: If no live data, get historical data (your existing logic)
+                historical_data = None
+                if not live_data:
+                    print(f"  📊 Step 2: No live data found, using historical data...")
                     
-                    # Still create a record to show we checked
-                    results.append({
+                    elements = await page.query_selector_all('div[aria-label*="Popular times"] [aria-label*="at"]')
+                    print(f"  📊 Found {len(elements)} total time elements")
+                    
+                    all_time_data = []
+                    for i, el in enumerate(elements):
+                        aria = await el.get_attribute('aria-label')
+                        if not aria or not re.search(r"\d+% busy", aria):
+                            continue
+                        
+                        time_match = re.search(r"at (\d{1,2})\u202f(AM|PM)\.?", aria)
+                        if not time_match:
+                            time_match = re.search(r"at (\d{1,2}) (AM|PM)\.?", aria)
+                        
+                        if time_match:
+                            hour_12 = int(time_match.group(1))
+                            meridiem = time_match.group(2)
+                            
+                            if meridiem == "AM":
+                                hour_24 = hour_12 if hour_12 != 12 else 0
+                            else:
+                                hour_24 = hour_12 if hour_12 == 12 else hour_12 + 12
+                            
+                            display_hour = 24 if hour_24 == 0 else hour_24
+                            percent_match = re.search(r"(\d+)%", aria)
+                            busyness_percent = int(percent_match.group(1)) if percent_match else None
+                            
+                            data_entry = {
+                                "scrape_timestamp": current_time.isoformat(),
+                                "restaurant_url": url,
+                                "element_index": i,
+                                "hour_24": hour_24,
+                                "display_hour": display_hour,
+                                "hour_12": hour_12,
+                                "meridiem": meridiem,
+                                "hour_label": f"{hour_12} {meridiem}",
+                                "busyness_percent": busyness_percent,
+                                "raw_aria_label": aria,
+                                "is_target_hour": display_hour == target_hour,
+                                "target_weekday": target_weekday,
+                                "target_hour": target_hour
+                            }
+                            
+                            all_time_data.append(data_entry)
+                            all_scraped_data.append(data_entry)
+
+                    if all_time_data:
+                        # Detect day cycles based on hour patterns
+                        hour_sequence = [d["display_hour"] for d in all_time_data]
+                        print(f"  📋 Raw hour sequence: {hour_sequence}")
+
+                        day_cycles = []
+                        current_cycle = []
+                        
+                        print(f"  🔄 Analyzing hour cycles to detect days...")
+                        print(f"     Looking for 6 AM to mark new day boundaries...")
+                        
+                        for idx, data in enumerate(all_time_data):
+                            hour = data["hour_24"]
+                            
+                            # If we see hour 6 (6 AM) and we already have data, start a new cycle
+                            if hour == 6 and current_cycle:
+                                print(f"    📅 Day boundary detected at element {data['element_index']} (6 AM)")
+                                print(f"       Previous cycle had {len(current_cycle)} hours: {[d['display_hour'] for d in current_cycle]}")
+                                day_cycles.append(current_cycle)
+                                current_cycle = []
+                            
+                            current_cycle.append(data)
+
+                        # Add the last cycle
+                        if current_cycle:
+                            print(f"    📅 Final cycle has {len(current_cycle)} hours: {[d['display_hour'] for d in current_cycle]}")
+                            day_cycles.append(current_cycle)
+
+                        print(f"  📊 Detected {len(day_cycles)} day cycles total")
+                        
+                        # FIXED: Better day assignment logic
+                        # Google Maps typically shows data starting from several days ago up to today
+                        # The pattern appears to be: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
+                        # But the first cycle (index 0) is actually Monday (today), not Sunday
+                        
+                        print(f"  📅 Assigning day names to cycles...")
+                        print(f"     Current day: {current_weekday}")
+                        print(f"     Target day for search: {target_weekday}")
+                        
+                        # Calculate what day each cycle should represent
+                        # Based on the CSV data, cycle 0 = Monday (today), so we need to work backwards
+                        day_names = {}
+                        
+                        # Find today's cycle by looking for the target weekday's position in the week
+                        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                        current_day_index = weekdays.index(current_weekday)
+                        
+                        # Assign days to cycles assuming cycle 0 represents today (Monday)
+                        for cycle_idx in range(len(day_cycles)):
+                            # Calculate the day offset from today
+                            # cycle 0 = today (Monday), cycle 1 = tomorrow (Tuesday), etc.
+                            # but we need to wrap around the week
+                            day_offset = cycle_idx
+                            actual_day_index = (current_day_index + day_offset) % 7
+                            day_names[cycle_idx] = weekdays[actual_day_index]
+                            
+                            # Update cycle assignment in scraped data
+                            cycle = day_cycles[cycle_idx]
+                            cycle_hours = sorted(set(d["display_hour"] for d in cycle))
+                            
+                            for data in cycle:
+                                data["detected_cycle"] = cycle_idx
+                                data["cycle_hours_count"] = len(cycle_hours)
+                                data["cycle_start_hour"] = min(cycle_hours) if cycle_hours else None
+                                data["cycle_end_hour"] = max(cycle_hours) if cycle_hours else None
+                                data["assigned_weekday"] = day_names[cycle_idx]
+                                data["day_offset"] = day_offset
+                                data["is_today_cycle"] = cycle_idx == 0  # Cycle 0 is today
+                            
+                            print(f"    Cycle {cycle_idx} = {day_names[cycle_idx]} (today + {day_offset} days)")
+                            print(f"       Hours: {cycle_hours}")
+
+                        # Find target historical data
+                        for cycle_idx, cycle in enumerate(day_cycles):
+                            cycle_day_name = day_names.get(cycle_idx, "Unknown")
+                            
+                            if cycle_day_name == target_weekday:
+                                print(f"    ✅ Found target day cycle {cycle_idx} ({target_weekday})")
+                                for data in cycle:
+                                    if data["display_hour"] == target_hour:
+                                        historical_data = {
+                                            "restaurant_url": url,
+                                            "weekday": target_weekday,
+                                            "hour_24": current_hour_24,
+                                            "hour_label": f"{data['hour_12']} {data['meridiem']}",
+                                            "timestamp": current_time.isoformat(),
+                                            "value": data["raw_aria_label"] + f" (HISTORICAL - Cycle {cycle_idx})",
+                                            "busyness_percent": data["busyness_percent"],
+                                            "data_type": "HISTORICAL"
+                                        }
+                                        print(f"    📊 Found historical data: {data['busyness_percent']}% at {data['hour_12']} {data['meridiem']}")
+                                        break
+                                break
+
+                # STEP 3: Determine final data to use
+                if live_data:
+                    final_data = live_data
+                    detection_method = "LIVE"
+                    confidence = live_data.get("confidence", "N/A")
+                    live_flag = live_data.get("live_flag", "N/A")
+                    print(f"  ✅ Using LIVE data: {live_data['busyness_percent']}% (Flag: {live_flag})")
+                elif historical_data:
+                    final_data = historical_data
+                    print(f"  ✅ Using HISTORICAL data: {historical_data['busyness_percent']}% (fallback)")
+                else:
+                    final_data = {
                         "restaurant_url": url,
                         "weekday": target_weekday,
                         "hour_24": current_hour_24,
                         "hour_label": f"{current_hour_24 % 12 or 12} {'AM' if current_hour_24 < 12 else 'PM'}",
                         "timestamp": current_time.isoformat(),
                         "value": f"No data available for {target_weekday} at hour {target_hour}",
-                        "busyness_percent": None
-                    })
+                        "busyness_percent": None,
+                        "data_type": "NO_DATA"
+                    }
+                    print(f"  ❌ No data available for {target_weekday} at hour {target_hour}")
+
+                results.append(final_data)
                             
             except Exception as e:
                 print(f"❌ Error scraping {url}: {e}")
                 
-            # Small delay between restaurants
             await asyncio.sleep(2)
 
         await browser.close()
@@ -338,11 +412,11 @@ async def scrape_current_hour():
         
         print(f"📊 All scraped data saved to {scraped_data_file}")
 
-    # Use EST time for filename (keep current hour for file naming)
+    # Save current hour results with data_type field
     current_hour_file = f"data/current_hour_{current_time.strftime('%Y%m%d_%H')}.csv"
     os.makedirs("data", exist_ok=True)
     
-    fieldnames = ["restaurant_url", "weekday", "hour_24", "hour_label", "timestamp", "value", "busyness_percent"]
+    fieldnames = ["restaurant_url", "weekday", "hour_24", "hour_label", "timestamp", "value", "busyness_percent", "data_type"]
     with open(current_hour_file, "w", newline='', encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()

@@ -69,6 +69,18 @@ def check_current_anomalies():
             print(f"   Raw busyness_percent: '{row['busyness_percent']}'")
             print(f"   Value field: '{row['value']}'")
             print(f"   Data weekday: {row['weekday']}")
+            print(f"   Data type: {row.get('data_type', 'UNKNOWN')}")
+            
+            # Check for live text flags
+            value_text = row.get('value', '').lower()
+            has_live_text_flag = any(flag in value_text for flag in [
+                "busier than usual", "as busy as it gets"
+            ])
+            
+            if has_live_text_flag:
+                print(f"   🚨 LIVE TEXT FLAG detected!")
+            elif "not busy" in value_text:
+                print(f"   ✅ LIVE TEXT: 'Not busy' - no flag")
             
             # Skip rows with no busyness data
             if not row["busyness_percent"] or row["busyness_percent"] == "None":
@@ -77,8 +89,9 @@ def check_current_anomalies():
                 
             current = int(row["busyness_percent"])
             expected = baseline.get(baseline_weekday, {}).get(baseline_hour)
+            data_type = row.get('data_type', 'UNKNOWN')
             
-            print(f"   Current busyness: {current}%")
+            print(f"   Current busyness: {current}% ({data_type})")
             print(f"   Expected baseline ({baseline_weekday} hour {baseline_hour}): {expected}%")
 
             if expected is None:
@@ -88,16 +101,36 @@ def check_current_anomalies():
             diff = current - expected
             print(f"   Difference: {diff}% (threshold: {THRESHOLD}%)")
             
-            if diff >= THRESHOLD:
-                print(f"🚨 ANOMALY DETECTED at {row['restaurant_url']}")
+            # Enhanced anomaly detection with text flags
+            is_threshold_anomaly = diff >= THRESHOLD
+            
+            if is_threshold_anomaly or has_live_text_flag:
+                if data_type == "LIVE" and has_live_text_flag:
+                    anomaly_prefix = "🚨🔴🚨 CRITICAL LIVE ANOMALY"
+                elif data_type == "LIVE":
+                    anomaly_prefix = "🚨🔴 LIVE ANOMALY"
+                elif has_live_text_flag:
+                    anomaly_prefix = "🚨📝 TEXT FLAG ANOMALY"
+                else:
+                    anomaly_prefix = "🚨 ANOMALY"
+                    
+                print(f"{anomaly_prefix} DETECTED at {row['restaurant_url']}")
                 print(f"    📅 {baseline_weekday} {baseline_hour}:00")
                 print(f"    📊 Current: {current}% | Baseline: {expected}% | Δ: +{diff}%")
+                print(f"    🎯 Data type: {data_type}")
+                
+                if has_live_text_flag:
+                    print(f"    🚨 LIVE TEXT FLAG detected!")
+                if data_type == "LIVE":
+                    print(f"    🔥 This is REAL-TIME activity - high confidence!")
+                    
                 print(f"    🕐 Detected at: {current_time_est.strftime('%Y-%m-%d %H:%M:%S EST')}\n")
                 anomalies_found = True
             else:
-                print(f"✅ Normal activity at {row['restaurant_url']}: {current}% (baseline: {expected}%)")
+                status_icon = "✅🔴" if data_type == "LIVE" else "✅"
+                print(f"{status_icon} Normal activity at {row['restaurant_url']}: {current}% (baseline: {expected}%) [{data_type}]")
             
-            print()  # Add blank line between restaurants
+            print()
 
     return anomalies_found
 
