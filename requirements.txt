@@ -1,0 +1,26 @@
+# SignalSlice Dependencies
+# Web scraping and automation
+playwright>=1.40.0
+
+# Timezone handling
+pytz>=2023.3
+
+# Data processing (included with Python but explicit for clarity)
+# csv - built-in
+# json - built-in
+# os - built-in
+# re - built-in
+# datetime - built-in
+# logging - built-in
+# sys - built-in
+# asyncio - built-in
+# time - built-in
+# random - built-in
+
+# Optional: Data analysis (if you plan to expand)
+# pandas>=2.0.0
+# numpy>=1.24.0
+
+# Optional: Web framework (if you add a web interface)
+# flask>=2.3.0
+# fastapi>=0.100.0

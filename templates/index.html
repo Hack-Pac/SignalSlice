@@ -11,12 +11,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 </head>
-<body>
     <div class="matrix-bg"></div>
     
     <!-- Header -->
     <header class="header">
-        <div class="container">
             <div class="logo">
                 <i class="fas fa-satellite-dish"></i>
                 <h1>SignalSlice</h1>
@@ -30,7 +28,6 @@
             </nav>
             <div class="status-indicator">
                 <span>LIVE</span>
-            </div>
         </div>
     </header>
 
@@ -47,7 +44,6 @@
                     </div>
                 </div>
                 <div class="stat-card warning">
-                    <div class="stat-icon">📊</div>
                     <div class="stat-content">
                         <div class="stat-value">4.7</div>
                         <div class="stat-label">Years of Data</div>
@@ -65,7 +61,6 @@
                     <div class="stat-content">
                         <div class="stat-value">23</div>
                         <div class="stat-label">Successful Predictions</div>
-                    </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">🕐</div>
@@ -78,7 +73,6 @@
             </div>
         </section>
 
-        <!-- Alert Banner -->
         <section class="alert-banner warning">
             <div class="container">
                 <div class="alert-content">
@@ -92,7 +86,6 @@
 
         <div class="container">
             <div class="dashboard-grid">
-                <!-- Map Section -->
                 <section class="map-section">
                         <h2><i class="fas fa-map-marked-alt"></i> Pentagon Surveillance Zone</h2>
                         <div class="map-controls">
@@ -109,12 +102,10 @@
                             </select>
                         </div>
                     </div>
-                    <div class="map-container">
                         <div id="map"></div>
                         <div class="map-legend">
                                 <div class="legend-color pentagon"></div>
                                 <span>Pentagon</span>
-                            </div>
                             <div class="legend-item">
                                 <div class="legend-color high-activity"></div>
                                 <span>High Activity</span>
@@ -125,7 +116,6 @@
                             </div>
                             <div class="legend-item">
                                 <div class="legend-color low-activity"></div>
-                                <span>Low Activity</span>
                             </div>
                         </div>
                     </div>
@@ -134,7 +124,6 @@
                 <!-- Charts Section -->
                 <section class="charts-section">
                     <div class="chart-container">
-                        <div class="section-header">
                             <h3><i class="fas fa-chart-line"></i> Pizza Index Trend (24h)</h3>
                             <div class="chart-controls">
                                 <button class="btn btn-sm active" data-period="24h">24h</button>
@@ -150,7 +139,6 @@
                         </div>
                         <canvas id="distributionChart"></canvas>
                     </div>
-
                 <!-- Analytics Panel -->
                 <section class="analytics-panel">
                     <div class="section-header">
@@ -163,15 +151,12 @@
                     </div>
                     
                     <div class="analysis-cards">
-                        <div class="analysis-card">
                                 <i class="fas fa-trending-up text-danger"></i>
                                 <span>Anomaly Detection</span>
                             </div>
                             <div class="analysis-content">
-                                <p><strong>Pattern identified:</strong> Late-night spike detected at 4 locations within 2-mile radius of Pentagon.</p>
                                 <p><strong>Historical correlation:</strong> Similar patterns observed 3 times in past 6 months, all coinciding with major events.</p>
                                 <div class="probability-bars">
-                                        <span>Critical Event</span>
                                         <div class="prob-bar">
                                             <div class="prob-fill critical" style="width: 73%"></div>
                                         <span>73%</span>
@@ -182,8 +167,6 @@
                                             <div class="prob-fill warning" style="width: 45%"></div>
                                         </div>
                                         <span>45%</span>
-                                    </div>
-                                    <div class="prob-item">
                                         <span>Normal Activity</span>
                                         <div class="prob-bar">
                                             <div class="prob-fill normal" style="width: 12%"></div>
@@ -205,10 +188,8 @@
                     </div>
                 </section>
 
-                <!-- Data Sources -->
                 <section class="data-sources">
                     <div class="section-header">
-                        <h3><i class="fas fa-database"></i> Data Sources</h3>
                     </div>
                     <div class="source-grid">
                             <div class="source-header">
@@ -229,10 +210,8 @@
                             </div>
                         </div>
                         <div class="source-card warning">
-                            <div class="source-header">
                                 <i class="fas fa-utensils"></i>
                                 <span>DoorDash Scraper</span>
-                                <div class="status-dot warning"></div>
                             </div>
                             <div class="source-stats">
                                 <span>Rate limited • Last: 45min ago</span>
@@ -249,7 +228,6 @@
                         </div>
                     </div>
                 </section>
-                <!-- Recent Events -->
                 <section class="recent-events">
                     <div class="section-header">
                         <h3><i class="fas fa-history"></i> Recent Events</h3>
@@ -259,19 +237,16 @@
                             <div class="event-content">
                             </div>
                         </div>
-                        <div class="event-item warning">
                             <div class="event-time">11:23 PM</div>
                             <div class="event-content">
                                 <div class="event-desc">Order frequency increased 340% in last 30 minutes</div>
                             </div>
                         <div class="event-item normal">
-                            <div class="event-time">10:45 PM</div>
                             <div class="event-content">
                                 <div class="event-title">📊 Baseline recalibrated</div>
                                 <div class="event-desc">Moving average updated with 4.7 years of historical data</div>
                             </div>
                         </div>
-                        <div class="event-item">
                             <div class="event-time">10:15 PM</div>
                             <div class="event-content">
                                 <div class="event-title">✅ All systems operational</div>
@@ -279,7 +254,6 @@
                             </div>
                         </div>
                 </section>
-            </div>
     </main>
 
     <!-- Floating Action Button -->
@@ -296,11 +270,73 @@
             </button>
                 <i class="fas fa-cog"></i>
                 <span>Settings</span>
-            </button>
     </div>
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
