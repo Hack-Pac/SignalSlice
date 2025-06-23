@@ -110,6 +110,8 @@ async def scrape_current_hour():
         print(f"📅 Looking for TODAY's ({target_weekday}) data at hour {target_hour}")
     
     results = []
+    all_scraped_data = []  # Store all scraped data for CSV output
+    
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
@@ -154,15 +156,24 @@ async def scrape_current_hour():
                         percent_match = re.search(r"(\d+)%", aria)
                         busyness_percent = int(percent_match.group(1)) if percent_match else None
                         
-                        all_time_data.append({
-                            "index": i,
+                        data_entry = {
+                            "scrape_timestamp": current_time.isoformat(),
+                            "restaurant_url": url,
+                            "element_index": i,
                             "hour_24": hour_24,
                             "display_hour": display_hour,  # Hour 24 for 12 AM
                             "hour_12": hour_12,
                             "meridiem": meridiem,
-                            "busyness": busyness_percent,
-                            "raw": aria
-                        })
+                            "hour_label": f"{hour_12} {meridiem}",
+                            "busyness_percent": busyness_percent,
+                            "raw_aria_label": aria,
+                            "is_target_hour": display_hour == target_hour,
+                            "target_weekday": target_weekday,
+                            "target_hour": target_hour
+                        }
+                        
+                        all_time_data.append(data_entry)
+                        all_scraped_data.append(data_entry)  # Add to global scraped data
 
                 if not all_time_data:
                     print("  ❌ No time data found")
@@ -184,13 +195,12 @@ async def scrape_current_hour():
                     
                     # If we see hour 6 (6 AM) and we already have data, start a new cycle
                     if hour == 6 and current_cycle:
-                        print(f"    📅 Day boundary detected at element {data['index']} (6 AM)")
+                        print(f"    📅 Day boundary detected at element {data['element_index']} (6 AM)")
                         print(f"       Previous cycle had {len(current_cycle)} hours: {[d['display_hour'] for d in current_cycle]}")
                         day_cycles.append(current_cycle)
                         current_cycle = []
                     
                     current_cycle.append(data)
-                    print(f"       Added hour {data['display_hour']} to current cycle (total: {len(current_cycle)})")
 
                 # Add the last cycle
                 if current_cycle:
@@ -199,42 +209,47 @@ async def scrape_current_hour():
 
                 print(f"  📊 Detected {len(day_cycles)} day cycles total")
                 
-                # Assign days to cycles with better logic
-                # The issue is determining which cycle represents "today"
+                # FIXED: Better day assignment logic
+                # Google Maps typically shows data starting from several days ago up to today
+                # The pattern appears to be: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
+                # But the first cycle (index 0) is actually Monday (today), not Sunday
+                
                 print(f"  📅 Assigning day names to cycles...")
                 print(f"     Current day: {current_weekday}")
                 print(f"     Target day for search: {target_weekday}")
                 
-                # Try to identify today's cycle by looking for the most complete recent cycle
-                today_cycle_idx = None
-                for cycle_idx, cycle in enumerate(day_cycles):
-                    cycle_hours = sorted(set(d["display_hour"] for d in cycle))
-                    cycle_start_hour = min(cycle_hours) if cycle_hours else None
-                    cycle_end_hour = max(cycle_hours) if cycle_hours else None
-                    
-                    print(f"    Cycle {cycle_idx}: {len(cycle_hours)} unique hours")
-                    print(f"       Hours: {cycle_hours}")
-                    print(f"       Range: {cycle_start_hour} to {cycle_end_hour}")
-                    
-                    # Heuristic: Look for a cycle that starts around 6-10 and has reasonable coverage
-                    if cycle_start_hour and cycle_start_hour <= 10 and len(cycle_hours) >= 10:
-                        if today_cycle_idx is None:  # Take the first reasonable cycle as "today"
-                            today_cycle_idx = cycle_idx
-                            print(f"       🎯 Marking this as TODAY's cycle (first complete cycle)")
-
-                # If we couldn't identify today's cycle, default to cycle 1 (second cycle)
-                if today_cycle_idx is None and len(day_cycles) > 1:
-                    today_cycle_idx = 1
-                    print(f"    🎯 Defaulting to cycle 1 as TODAY's cycle")
-
-                # Build day mapping based on today's cycle
+                # Calculate what day each cycle should represent
+                # Based on the CSV data, cycle 0 = Monday (today), so we need to work backwards
                 day_names = {}
-                if today_cycle_idx is not None:
-                    for i in range(len(day_cycles)):
-                        day_offset = i - today_cycle_idx  # Offset from today's cycle
-                        target_date = current_time + timedelta(days=day_offset)
-                        day_names[i] = target_date.strftime('%A')
-                        print(f"    Cycle {i} = {day_names[i]} (offset: {day_offset} days)")
+                
+                # Find today's cycle by looking for the target weekday's position in the week
+                weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                current_day_index = weekdays.index(current_weekday)
+                
+                # Assign days to cycles assuming cycle 0 represents today (Monday)
+                for cycle_idx in range(len(day_cycles)):
+                    # Calculate the day offset from today
+                    # cycle 0 = today (Monday), cycle 1 = tomorrow (Tuesday), etc.
+                    # but we need to wrap around the week
+                    day_offset = cycle_idx
+                    actual_day_index = (current_day_index + day_offset) % 7
+                    day_names[cycle_idx] = weekdays[actual_day_index]
+                    
+                    # Update cycle assignment in scraped data
+                    cycle = day_cycles[cycle_idx]
+                    cycle_hours = sorted(set(d["display_hour"] for d in cycle))
+                    
+                    for data in cycle:
+                        data["detected_cycle"] = cycle_idx
+                        data["cycle_hours_count"] = len(cycle_hours)
+                        data["cycle_start_hour"] = min(cycle_hours) if cycle_hours else None
+                        data["cycle_end_hour"] = max(cycle_hours) if cycle_hours else None
+                        data["assigned_weekday"] = day_names[cycle_idx]
+                        data["day_offset"] = day_offset
+                        data["is_today_cycle"] = cycle_idx == 0  # Cycle 0 is today
+                    
+                    print(f"    Cycle {cycle_idx} = {day_names[cycle_idx]} (today + {day_offset} days)")
+                    print(f"       Hours: {cycle_hours}")
 
                 # Find target data
                 target_data = None
@@ -251,6 +266,7 @@ async def scrape_current_hour():
                     if cycle_day_name == target_weekday:
                         print(f"    ✅ Found target day cycle {cycle_idx} ({target_weekday})")
                         for data in cycle:
+                            data["is_target_cycle"] = True
                             if data["display_hour"] == target_hour:
                                 target_data = {
                                     "restaurant_url": url,
@@ -258,13 +274,16 @@ async def scrape_current_hour():
                                     "hour_24": current_hour_24,  # Use actual current hour for filename
                                     "hour_label": f"{data['hour_12']} {data['meridiem']}",
                                     "timestamp": current_time.isoformat(),
-                                    "value": data["raw"] + f" ({target_weekday} Hour {target_hour} - Cycle {cycle_idx})",
-                                    "busyness_percent": data["busyness"]
+                                    "value": data["raw_aria_label"] + f" ({target_weekday} Hour {target_hour} - Cycle {cycle_idx})",
+                                    "busyness_percent": data["busyness_percent"]
                                 }
-                                print(f"      🎯 FOUND target data: {data['busyness']}% at {data['hour_12']} {data['meridiem']} on {target_weekday}")
+                                data["selected_as_target"] = True
+                                print(f"      🎯 FOUND target data: {data['busyness_percent']}% at {data['hour_12']} {data['meridiem']} on {target_weekday}")
                                 break
                         break
                     else:
+                        for data in cycle:
+                            data["is_target_cycle"] = False
                         print(f"       ❌ Not target day (looking for {target_weekday})")
 
                 # Add the data we found (if any)
@@ -293,6 +312,31 @@ async def scrape_current_hour():
             await asyncio.sleep(2)
 
         await browser.close()
+
+    # Save all scraped data to CSV
+    if all_scraped_data:
+        scraped_data_file = f"data/all_scraped_data_{current_time.strftime('%Y%m%d_%H%M%S')}.csv"
+        os.makedirs("data", exist_ok=True)
+        
+        scraped_fieldnames = [
+            "scrape_timestamp", "restaurant_url", "element_index", "hour_24", "display_hour",
+            "hour_12", "meridiem", "hour_label", "busyness_percent", "raw_aria_label",
+            "is_target_hour", "target_weekday", "target_hour", "detected_cycle",
+            "cycle_hours_count", "cycle_start_hour", "cycle_end_hour", "assigned_weekday",
+            "day_offset", "is_today_cycle", "is_target_cycle", "selected_as_target"
+        ]
+        
+        with open(scraped_data_file, "w", newline='', encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=scraped_fieldnames)
+            writer.writeheader()
+            for data in all_scraped_data:
+                # Fill in missing fields with default values
+                for field in scraped_fieldnames:
+                    if field not in data:
+                        data[field] = None
+                writer.writerow(data)
+        
+        print(f"📊 All scraped data saved to {scraped_data_file}")
 
     # Use EST time for filename (keep current hour for file naming)
     current_hour_file = f"data/current_hour_{current_time.strftime('%Y%m%d_%H')}.csv"
@@ -337,7 +381,7 @@ async def main():
         writer.writerows(results)
 
     print(f"✅ Done! Data saved to `{OUTPUT_FILE}`.")
-
+    
 # --- RUN ---
 if __name__ == "__main__":
     asyncio.run(main())
