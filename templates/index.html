@@ -4,276 +4,388 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛰️ SignalSlice - Pentagon Pizza Index Monitor</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 </head>
-    <div class="matrix-bg"></div>
+<body>    <!-- Animated Grid Background -->
+    <div class="surveillance-grid"></div>
+    <div class="radar-sweep"></div>
     
-    <!-- Header -->
+    <!-- Header with Live Status -->
     <header class="header">
+        <div class="container">
             <div class="logo">
-                <i class="fas fa-satellite-dish"></i>
-                <h1>SignalSlice</h1>
-                <span class="version">v2.1.3</span>
+                <div class="satellite-icon">
+                    <svg viewBox="0 0 40 40" class="satellite-svg">
+                        <circle cx="20" cy="20" r="8" fill="none" stroke="#3b82f6" stroke-width="2"/>
+                        <path d="M12 20 L28 20 M20 12 L20 28" stroke="#3b82f6" stroke-width="1"/>
+                        <circle cx="20" cy="20" r="2" fill="#ef4444"/>
+                        <circle cx="20" cy="20" r="16" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.3"/>
+                    </svg>
+                </div>                <div class="logo-text">
+                    <h1>SIGNALSLICE</h1>
+                    <span class="tagline">PENTAGON PIZZA INDEX MONITOR</span>
+                </div>                <div class="classification">
+                    <span>LIVE DATA</span>
+                </div>
             </div>
-            <nav class="nav">
-                <a href="#dashboard" class="nav-link active">Dashboard</a>
-                <a href="#analytics" class="nav-link">Analytics</a>
-                <a href="#alerts" class="nav-link">Alerts</a>
-                <a href="#settings" class="nav-link">Settings</a>
-            </nav>
-            <div class="status-indicator">
-                <span>LIVE</span>
+            
+            <div class="status-panel">
+                <div class="live-indicator">
+                    <div class="pulse-dot"></div>
+                    <span>LIVE MONITORING</span>
+                </div>
+                <div class="system-time" id="system-time"></div>
+            </div>
         </div>
     </header>
 
+    <!-- Alert Banner -->
+    <div class="alert-banner" id="alert-banner" style="display: none;">
+        <div class="container">
+            <div class="alert-content">
+                <div class="alert-icon">
+                    <svg viewBox="0 0 24 24" class="warning-icon">
+                        <path d="M12 2L13.5 6L18 4.5L16.5 9L21 7.5L19.5 12L24 10.5L22.5 15L18 16.5L21 21L16.5 19.5L15 24L10.5 22.5L12 18L7.5 21L9 16.5L4.5 18L6 13.5L1.5 15L3 10.5L7.5 9L4.5 4.5L9 6L10.5 1.5L15 3L12 2Z" fill="#fbbf24"/>
+                    </svg>
+                </div>
+                <div class="alert-text">
+                    <strong id="alert-title">ANOMALY DETECTED</strong>
+                    <span id="alert-message">Unusual activity patterns detected in the surveillance zone</span>
+                </div>
+                <div class="alert-timestamp" id="alert-timestamp"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Dashboard -->
     <main class="main-content">
-        <!-- Top Statistics Bar -->
-        <section class="stats-bar">
+        <!-- Critical Stats Grid -->
+        <section class="stats-grid">
             <div class="container">
-                <div class="stat-card critical">
-                    <div class="stat-icon">🍕</div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="pizza-index">7.42</div>
-                        <div class="stat-label">Current Pizza Index</div>
+                <div class="stat-card critical" id="pizza-index-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 40 40" class="pizza-icon">
+                            <circle cx="20" cy="20" r="18" fill="#dc2626" stroke="#991b1b" stroke-width="2"/>
+                            <circle cx="14" cy="14" r="2" fill="#fbbf24"/>
+                            <circle cx="26" cy="16" r="2" fill="#10b981"/>
+                            <circle cx="16" cy="26" r="2" fill="#fbbf24"/>
+                            <circle cx="24" cy="24" r="2" fill="#10b981"/>
+                            <path d="M20 2 L20 38 M6 20 L34 20" stroke="#991b1b" stroke-width="1" opacity="0.3"/>
+                        </svg>
                     </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="pizza-index">0.00</div>
+                        <div class="stat-label">PIZZA INDEX</div>
+                        <div class="stat-change" id="pizza-change">+0.00%</div>
+                    </div>
+                    <div class="stat-sparkline" id="index-sparkline"></div>
                 </div>
+
                 <div class="stat-card warning">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 40 40" class="target-icon">
+                            <circle cx="20" cy="20" r="16" fill="none" stroke="#f59e0b" stroke-width="2"/>
+                            <circle cx="20" cy="20" r="12" fill="none" stroke="#f59e0b" stroke-width="1"/>
+                            <circle cx="20" cy="20" r="8" fill="none" stroke="#f59e0b" stroke-width="1"/>
+                            <circle cx="20" cy="20" r="4" fill="none" stroke="#f59e0b" stroke-width="1"/>
+                            <circle cx="20" cy="20" r="2" fill="#f59e0b"/>
+                        </svg>
+                    </div>
                     <div class="stat-content">
-                        <div class="stat-value">4.7</div>
-                        <div class="stat-label">Years of Data</div>
-                        <div class="stat-sublabel">1,721 days analyzed</div>
+                        <div class="stat-value" id="active-locations">127</div>
+                        <div class="stat-label">ACTIVE LOCATIONS</div>
+                        <div class="stat-sublabel">50mi radius</div>
                     </div>
                 </div>
-                    <div class="stat-icon">🎯</div>
-                    <div class="stat-content">
-                        <div class="stat-value">127</div>
-                        <div class="stat-label">Pizza Locations</div>
-                        <div class="stat-sublabel">50mi radius</div>
-                </div>
+
                 <div class="stat-card">
-                    <div class="stat-icon">⚡</div>
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 40 40" class="scan-icon">
+                            <rect x="8" y="8" width="24" height="24" fill="none" stroke="#3b82f6" stroke-width="2" rx="2"/>
+                            <path d="M8 16 L32 16 M8 20 L32 20 M8 24 L32 24" stroke="#3b82f6" stroke-width="1"/>
+                            <circle cx="20" cy="20" r="3" fill="#3b82f6"/>
+                        </svg>
+                    </div>
                     <div class="stat-content">
-                        <div class="stat-value">23</div>
-                        <div class="stat-label">Successful Predictions</div>
+                        <div class="stat-value" id="scan-count">0</div>
+                        <div class="stat-label">SCANS COMPLETED</div>
+                        <div class="stat-sublabel" id="scan-frequency">Every 15min</div>
+                    </div>
                 </div>
+
                 <div class="stat-card">
-                    <div class="stat-icon">🕐</div>
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 40 40" class="anomaly-icon">
+                            <path d="M20 4 L36 20 L20 36 L4 20 Z" fill="none" stroke="#10b981" stroke-width="2"/>
+                            <circle cx="20" cy="20" r="8" fill="none" stroke="#10b981" stroke-width="1"/>
+                            <path d="M16 20 L20 24 L24 16" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
                     <div class="stat-content">
-                        <div class="stat-value" id="last-update">2min</div>
-                        <div class="stat-label">Last Update</div>
-                        <div class="stat-sublabel">Auto-refresh: 15min</div>
+                        <div class="stat-value" id="anomaly-count">0</div>
+                        <div class="stat-label">ANOMALIES DETECTED</div>
+                        <div class="stat-sublabel" id="last-anomaly">None detected</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="alert-banner warning">
+        <!-- Main Dashboard Grid -->
+        <section class="dashboard-grid">
             <div class="container">
-                <div class="alert-content">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <div class="alert-text">
-                        <strong>ELEVATED ACTIVITY DETECTED</strong>
+                <!-- Live Activity Feed -->
+                <div class="activity-panel">
+                    <div class="panel-header">
+                        <h3>
+                            <svg viewBox="0 0 24 24" class="activity-icon">
+                                <path d="M3 12h4l3-8 4 16 3-8h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            LIVE ACTIVITY FEED
+                        </h3>
+                        <div class="update-indicator">
+                            <div class="pulse-dot small"></div>
+                            <span id="last-update">Just now</span>
+                        </div>
                     </div>
-                    <div class="alert-timestamp">2 minutes ago</div>
+                    <div class="activity-feed" id="activity-feed">
+                        <!-- Activity items will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Real-time Chart -->
+                <div class="chart-panel">
+                    <div class="panel-header">
+                        <h3>
+                            <svg viewBox="0 0 24 24" class="chart-icon">
+                                <path d="M3 20V4h18v16H3z" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <path d="M7 14l4-4 4 4 4-8" fill="none" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            REAL-TIME ANALYSIS
+                        </h3>
+                        <div class="chart-controls">
+                            <button class="btn btn-sm active" data-period="1h">1H</button>
+                            <button class="btn btn-sm" data-period="6h">6H</button>
+                            <button class="btn btn-sm" data-period="24h">24H</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="realtime-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Map Interface -->
+                <div class="map-panel">
+                    <div class="panel-header">                        <h3>
+                            <svg viewBox="0 0 24 24" class="map-icon">
+                                <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <path d="M8 2v16M16 6v16" stroke="currentColor" stroke-width="1"/>
+                            </svg>
+                            MONITORING ZONE
+                        </h3>
+                        <div class="map-controls">
+                            <button class="btn btn-sm" id="center-pentagon">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor"/>
+                                    <path d="m2 17 10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                CENTER
+                            </button>
+                            <button class="btn btn-sm" id="toggle-heatmap">HEATMAP</button>
+                        </div>
+                    </div>
+                    <div class="map-container">
+                        <div id="surveillance-map"></div>
+                        <div class="map-overlay">
+                            <div class="threat-level">
+                                <span>THREAT LEVEL</span>
+                                <div class="threat-meter">
+                                    <div class="threat-fill" id="threat-fill" style="width: 45%"></div>
+                                </div>
+                                <span id="threat-level-text">MODERATE</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="status-panel-main">
+                    <div class="panel-header">
+                        <h3>
+                            <svg viewBox="0 0 24 24" class="system-icon">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="2"/>
+                                <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            SYSTEM STATUS
+                        </h3>
+                    </div>
+                    <div class="status-grid">
+                        <div class="status-item online">
+                            <div class="status-dot"></div>
+                            <span>Google Maps API</span>
+                            <div class="status-value">127 locations</div>
+                        </div>
+                        <div class="status-item online">
+                            <div class="status-dot"></div>
+                            <span>Scanner Service</span>
+                            <div class="status-value">Active</div>
+                        </div>
+                        <div class="status-item warning">
+                            <div class="status-dot"></div>
+                            <span>Data Pipeline</span>
+                            <div class="status-value">Rate limited</div>
+                        </div>
+                        <div class="status-item online">
+                            <div class="status-dot"></div>
+                            <span>Anomaly Detection</span>
+                            <div class="status-value">87% confidence</div>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </section>
 
-        <div class="container">
-            <div class="dashboard-grid">
-                <section class="map-section">
-                        <h2><i class="fas fa-map-marked-alt"></i> Pentagon Surveillance Zone</h2>
-                        <div class="map-controls">
-                            <button class="btn btn-sm" id="refresh-map">
-                                <i class="fas fa-sync-alt"></i> Refresh
-                            </button>
-                            <button class="btn btn-sm" id="toggle-heatmap">
-                            </button>
-                            <select id="time-filter">
-                                <option value="live">Live Data</option>
-                                <option value="1h">Last Hour</option>
-                                <option value="24h">Last 24h</option>
-                                <option value="7d">Last Week</option>
-                            </select>
-                        </div>
+        <!-- Historical Data Section -->
+        <section class="historical-section">
+            <div class="container">
+                <div class="section-header">                    <h2>
+                        <svg viewBox="0 0 24 24" class="history-icon">
+                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="12,6 12,12 16,14" fill="none" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        HISTORICAL DATA
+                    </h2>
+                </div>
+                <div class="history-grid">
+                    <div class="history-card">
+                        <h4>PATTERN ANALYSIS</h4>
+                        <div class="pattern-viz" id="pattern-viz"></div>
+                        <p>Correlation patterns identified across <strong>4.7 years</strong> of monitoring data</p>
                     </div>
-                        <div id="map"></div>
-                        <div class="map-legend">
-                                <div class="legend-color pentagon"></div>
-                                <span>Pentagon</span>
-                            <div class="legend-item">
-                                <div class="legend-color high-activity"></div>
-                                <span>High Activity</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color normal-activity"></div>
-                                <span>Normal Activity</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color low-activity"></div>
-                            </div>
+                    <div class="history-card">
+                        <h4>PREDICTION ACCURACY</h4>
+                        <div class="accuracy-meter">
+                            <div class="accuracy-fill" style="width: 89%"></div>
                         </div>
+                        <p><strong>89% accuracy</strong> in predicting activity anomalies</p>
                     </div>
-                </section>
-
-                <!-- Charts Section -->
-                <section class="charts-section">
-                    <div class="chart-container">
-                            <h3><i class="fas fa-chart-line"></i> Pizza Index Trend (24h)</h3>
-                            <div class="chart-controls">
-                                <button class="btn btn-sm active" data-period="24h">24h</button>
-                                <button class="btn btn-sm" data-period="7d">7d</button>
-                                <button class="btn btn-sm" data-period="30d">30d</button>
-                            </div>
+                    <div class="history-card">
+                        <h4>NOTABLE EVENTS</h4>
+                        <div class="events-list">
+                            <div class="event-marker critical"></div>
+                            <div class="event-marker warning"></div>
+                            <div class="event-marker normal"></div>
                         </div>
+                        <p><strong>23 successful predictions</strong> of unusual activity patterns</p>
                     </div>
-
-                    <div class="chart-container">
-                        <div class="section-header">
-                            <h3><i class="fas fa-chart-bar"></i> Order Distribution</h3>
-                        </div>
-                        <canvas id="distributionChart"></canvas>
-                    </div>
-                <!-- Analytics Panel -->
-                <section class="analytics-panel">
-                    <div class="section-header">
-                        <h3><i class="fas fa-brain"></i> AI Analysis</h3>
-                        <div class="confidence-meter">
-                            <span>Confidence: </span>
-                            <div class="confidence-bar">
-                                <div class="confidence-fill" style="width: 87%"></div>
-                            </div>
-                    </div>
-                    
-                    <div class="analysis-cards">
-                                <i class="fas fa-trending-up text-danger"></i>
-                                <span>Anomaly Detection</span>
-                            </div>
-                            <div class="analysis-content">
-                                <p><strong>Historical correlation:</strong> Similar patterns observed 3 times in past 6 months, all coinciding with major events.</p>
-                                <div class="probability-bars">
-                                        <div class="prob-bar">
-                                            <div class="prob-fill critical" style="width: 73%"></div>
-                                        <span>73%</span>
-                                    </div>
-                                    <div class="prob-item">
-                                        <span>Exercise/Drill</span>
-                                        <div class="prob-bar">
-                                            <div class="prob-fill warning" style="width: 45%"></div>
-                                        </div>
-                                        <span>45%</span>
-                                        <span>Normal Activity</span>
-                                        <div class="prob-bar">
-                                            <div class="prob-fill normal" style="width: 12%"></div>
-                                        </div>
-                                        <span>12%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                            <div class="analysis-header">
-                                <i class="fas fa-clock text-warning"></i>
-                                <span>Time Pattern Analysis</span>
-                            </div>
-                            <div class="analysis-content">
-                                <div class="time-heatmap">
-                                    <!-- This would be populated by JS -->
-                                <p><strong>Anomaly window:</strong> Currently active</p>
-                    </div>
-                </section>
-
-                <section class="data-sources">
-                    <div class="section-header">
-                    </div>
-                    <div class="source-grid">
-                            <div class="source-header">
-                                <i class="fab fa-google"></i>
-                                <span>Google Maps API</span>
-                                <div class="status-dot online"></div>
-                            <div class="source-stats">
-                                <span>87 locations • Updated 2min ago</span>
-                            </div>
-                        <div class="source-card active">
-                            <div class="source-header">
-                                <i class="fab fa-yelp"></i>
-                                <span>Yelp Fusion API</span>
-                                <div class="status-dot online"></div>
-                            </div>
-                            <div class="source-stats">
-                                <span>124 reviews • Updated 5min ago</span>
-                            </div>
-                        </div>
-                        <div class="source-card warning">
-                                <i class="fas fa-utensils"></i>
-                                <span>DoorDash Scraper</span>
-                            </div>
-                            <div class="source-stats">
-                                <span>Rate limited • Last: 45min ago</span>
-                            </div>
-                        </div>
-                        <div class="source-card active">
-                            <div class="source-header">
-                                <i class="fas fa-mobile-alt"></i>
-                                <div class="status-dot online"></div>
-                            </div>
-                            <div class="source-stats">
-                                <span>156 orders • Updated 3min ago</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                <section class="recent-events">
-                    <div class="section-header">
-                        <h3><i class="fas fa-history"></i> Recent Events</h3>
-                    <div class="events-timeline">
-                        <div class="event-item critical">
-                            <div class="event-time">11:47 PM</div>
-                            <div class="event-content">
-                            </div>
-                        </div>
-                            <div class="event-time">11:23 PM</div>
-                            <div class="event-content">
-                                <div class="event-desc">Order frequency increased 340% in last 30 minutes</div>
-                            </div>
-                        <div class="event-item normal">
-                            <div class="event-content">
-                                <div class="event-title">📊 Baseline recalibrated</div>
-                                <div class="event-desc">Moving average updated with 4.7 years of historical data</div>
-                            </div>
-                        </div>
-                            <div class="event-time">10:15 PM</div>
-                            <div class="event-content">
-                                <div class="event-title">✅ All systems operational</div>
-                                <div class="event-desc">127 pizza locations monitored, 4 data sources active</div>
-                            </div>
-                        </div>
-                </section>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- Floating Action Button -->
-    <div class="fab">
-        <button class="fab-button" id="fab-main">
-        </button>
-        <div class="fab-menu">
-            <button class="fab-item" data-action="alert">
-                <i class="fas fa-bell"></i>
-                <span>New Alert</span>
-            </button>
-            <button class="fab-item" data-action="export">
-                <i class="fas fa-download"></i>
-            </button>
-                <i class="fas fa-cog"></i>
-                <span>Settings</span>
-    </div>
+    <!-- Email Notification Signup -->
+    <footer class="notification-footer">
+        <div class="container">
+            <div class="notification-panel">
+                <div class="notification-content">
+                    <div class="notification-icon">
+                        <svg viewBox="0 0 40 40" class="email-icon">
+                            <rect x="4" y="8" width="32" height="24" rx="2" fill="none" stroke="#3b82f6" stroke-width="2"/>
+                            <path d="M4 8 L20 20 L36 8" fill="none" stroke="#3b82f6" stroke-width="2"/>
+                            <circle cx="32" cy="12" r="4" fill="#ef4444"/>
+                            <path d="M30 10 L34 14 M34 10 L30 14" stroke="white" stroke-width="1"/>
+                        </svg>
+                    </div>                    <div class="notification-text">
+                        <h3>JOIN THE NEWSLETTER</h3>
+                        <p>Get real-time alerts when anomalies are detected. Join <strong>2,847</strong> professionals monitoring the Pentagon Pizza Index.</p>
+                    </div>
+                    <form class="notification-form" id="watchlist-form">                        <div class="form-group">
+                            <input type="email" id="email-input" placeholder="Enter your email address" required>
+                            <button type="submit" class="btn-submit">
+                                <span>SUBSCRIBE</span>
+                                <svg viewBox="0 0 24 24" class="submit-icon">
+                                    <path d="M5 12h14M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                        </div>                        <div class="security-notice">
+                            <svg viewBox="0 0 24 24" class="lock-icon">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            <span>Your email is protected and will only be used for pizza index alerts.</span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer Info -->
+        <div class="footer-info">
+            <div class="container">                <div class="footer-content">
+                    <div class="footer-left">
+                        <p>&copy; 2024 SignalSlice Analytics. All rights reserved.</p>
+                        <p>Open source intelligence monitoring system.</p>
+                    </div>
+                    <div class="footer-right">
+                        <div class="classification-level">
+                            <span>DATA SOURCE: PUBLIC APIS</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
 
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="scanning-animation">            <svg viewBox="0 0 100 100" class="radar-svg">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.2"/>
+                <circle cx="50" cy="50" r="35" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.3"/>
+                <circle cx="50" cy="50" r="25" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.4"/>
+                <circle cx="50" cy="50" r="15" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.5"/>
+                <line x1="50" y1="50" x2="50" y2="5" stroke="#3b82f6" stroke-width="2" class="radar-line"/>
+            </svg>
+            <p>SCANNING MONITORING ZONE...</p>        </div>    </div>
+
+    <!-- SocketIO for real-time communication -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="/static/script.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

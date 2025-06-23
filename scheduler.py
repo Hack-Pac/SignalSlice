@@ -8,6 +8,8 @@ import pytz
 from scraping.gmapsScrape import scrape_current_hour
 from script.anomalyDetect import check_current_anomalies
 import re
+import requests
+import threading
 
 # Configure logging with UTF-8 encoding
 def setup_logging():
