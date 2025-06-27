@@ -1,13 +1,13 @@
 # SignalSlice Dependencies
 # Web scraping and automation
-playwright>=1.40.0
+playwright
 
 # Timezone handling
-pytz>=2023.3
+pytz
 
 # Web framework for real-time dashboard
-flask>=2.3.0
-flask-socketio>=5.3.0
+flask 
+flask-socketio
 
 # Data processing (included with Python but explicit for clarity)
 # csv - built-in

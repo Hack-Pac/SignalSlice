@@ -29,7 +29,6 @@ def check_current_anomalies():
     current_time_est = datetime.now(est)
     current_weekday = current_time_est.strftime('%A')
     current_hour = str(current_time_est.hour)
-    
     # Adjust for Google Maps' day structure: 12 AM belongs to previous day
     if current_time_est.hour == 0:
         # 12 AM belongs to previous day
@@ -49,7 +48,6 @@ def check_current_anomalies():
     baseline_path = os.path.join(os.path.dirname(__file__), "..", "baseline.json")
     with open(baseline_path, "r") as f:
         baseline = json.load(f)
-
     # Find the most recent current hour data file
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
     current_hour_pattern = f"current_hour_{current_time_est.strftime('%Y%m%d_%H')}.csv"
@@ -70,13 +68,11 @@ def check_current_anomalies():
             print(f"   Value field: '{row['value']}'")
             print(f"   Data weekday: {row['weekday']}")
             print(f"   Data type: {row.get('data_type', 'UNKNOWN')}")
-            
             # Check for live text flags
             value_text = row.get('value', '').lower()
             has_live_text_flag = any(flag in value_text for flag in [
                 "busier than usual", "as busy as it gets"
             ])
-            
             if has_live_text_flag:
                 print(f"   🚨 LIVE TEXT FLAG detected!")
             elif "not busy" in value_text:
@@ -137,3 +133,15 @@ def check_current_anomalies():
 # Check for current anomalies when the script is run
 if __name__ == "__main__":
     check_current_anomalies()
+
+
+
+
+
+
+
+
+
+
+
+

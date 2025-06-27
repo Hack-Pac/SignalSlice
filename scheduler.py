@@ -35,7 +35,6 @@ def setup_logging():
     
     logger.addHandler(console_handler)
     return logger
-
 # Initialize logger with UTF-8 support
 logger = setup_logging()
 
@@ -118,3 +117,13 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+
+
+
+
+
+
+
+

@@ -23,6 +23,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Global state for dashboard
 dashboard_state = {
     'pizza_index': 3.42,
+    'gay_bar_index': 6.58,  # Inverse of pizza - starts higher
     'active_locations': 127,
     'scan_count': 0,
     'anomaly_count': 0,
@@ -58,7 +59,6 @@ def add_activity_item(activity_type, message, level='normal'):
     
     # Also log to console for debugging
     print(f"[{timestamp}] {activity_type}: {message}")
-
 def update_pizza_index(new_value, change_percent=0):
     """Update pizza index and emit to clients"""
     old_value = dashboard_state['pizza_index']
@@ -70,7 +70,22 @@ def update_pizza_index(new_value, change_percent=0):
         'old_value': old_value
     }
     
+    print(f"DEBUG: Emitting pizza_index_update: {data}")
     socketio.emit('pizza_index_update', data)
+
+def update_gay_bar_index(new_value, change_percent=0):
+    """Update gay bar index and emit to clients"""
+    old_value = dashboard_state['gay_bar_index']
+    dashboard_state['gay_bar_index'] = new_value
+    
+    data = {
+        'value': new_value,
+        'change': change_percent,
+        'old_value': old_value
+    }
+    
+    print(f"DEBUG: Emitting gay_bar_index_update: {data}")
+    socketio.emit('gay_bar_index_update', data)
 
 def update_scan_stats():
     """Update scan statistics"""
@@ -105,10 +120,49 @@ async def run_scanner_cycle():
         add_activity_item('SCRAPE', '🎯 Priority: LIVE data > Historical data > No data', 'normal')
         
         # Run the actual scraping
-        await scrape_current_hour()
-        
-        add_activity_item('SCRAPE', '✅ Current hour data saved successfully', 'success')
-        add_activity_item('SCRAPE', 'Data scraping completed', 'success')
+        try:
+            scraped_data = await scrape_current_hour()
+            print(f"DEBUG: Scraped {len(scraped_data)} data points")
+            
+            add_activity_item('SCRAPE', '✅ Current hour data saved successfully', 'success')
+            add_activity_item('SCRAPE', 'Data scraping completed', 'success')
+            
+            # Debug: Print scraped data summary
+            restaurant_data = [d for d in scraped_data if d.get('venue_type') == 'restaurant']
+            gay_bar_data = [d for d in scraped_data if d.get('venue_type') == 'gay_bar']
+            print(f"DEBUG: Found {len(restaurant_data)} restaurant data points, {len(gay_bar_data)} gay bar data points")
+            
+            # Calculate pizza index from restaurant data  
+            if restaurant_data:
+                restaurant_with_data = [d for d in restaurant_data if d.get('busyness_percent') is not None]
+                if restaurant_with_data:
+                    avg_restaurant_busy = sum(d['busyness_percent'] for d in restaurant_with_data) / len(restaurant_with_data)
+                    # Convert to 0-10 scale (0% busy = 0, 100% busy = 10)
+                    new_pizza_index = avg_restaurant_busy / 10
+                    change_percent = ((new_pizza_index - dashboard_state['pizza_index']) / dashboard_state['pizza_index']) * 100 if dashboard_state['pizza_index'] > 0 else 0
+                    update_pizza_index(new_pizza_index, change_percent)
+                    add_activity_item('PIZZA', f'🍕 Pizza Index updated: {new_pizza_index:.2f} ({avg_restaurant_busy:.0f}% busy)', 'normal')
+                    print(f"DEBUG: Pizza index updated to {new_pizza_index:.2f}")
+            
+            # Calculate gay bar index from scraped data
+            if gay_bar_data:
+                gay_bar_with_data = [d for d in gay_bar_data if d.get('busyness_percent') is not None]
+                if gay_bar_with_data:
+                    avg_gay_bar_busy = sum(d['busyness_percent'] for d in gay_bar_with_data) / len(gay_bar_with_data)
+                    # Convert to 0-10 scale inversely (0% busy = 10, 100% busy = 0)
+                    new_gay_bar_index = 10 - (avg_gay_bar_busy / 10)
+                    change_percent = ((new_gay_bar_index - dashboard_state['gay_bar_index']) / dashboard_state['gay_bar_index']) * 100 if dashboard_state['gay_bar_index'] > 0 else 0
+                    update_gay_bar_index(new_gay_bar_index, change_percent)
+                    add_activity_item('GAYBAR', f'🏳️‍🌈 Gay Bar Index updated: {new_gay_bar_index:.2f} ({avg_gay_bar_busy:.0f}% busy)', 'normal')
+                    print(f"DEBUG: Gay bar index updated to {new_gay_bar_index:.2f}")
+            else:
+                add_activity_item('GAYBAR', '⚠️ No gay bar data available this scan', 'warning')
+                
+        except Exception as e:
+            add_activity_item('ERROR', f'❌ Scraping failed: {str(e)}', 'critical')
+            print(f"ERROR in scraping: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Step 2: Check for anomalies with detailed progress
         add_activity_item('ANALYZE', '🔍 Checking for anomalies...', 'normal')
@@ -166,7 +220,6 @@ async def run_scanner_cycle():
         add_activity_item('ERROR', f'❌ Scanner error: {str(e)}', 'critical')
         socketio.emit('scanning_complete')
         print(f"Scanner error: {e}")
-
 async def hourly_scanner():
     """Main scanner loop that runs hourly"""
     print("🛰️ SignalSlice Integrated Scanner Starting...")
@@ -300,15 +353,20 @@ def stop_scanner_endpoint():
 def handle_connect():
     """Handle client connection"""
     print(f"🔗 Client connected: {request.sid}")
-    emit('initial_state', {
+    
+    initial_state = {
         'pizza_index': dashboard_state['pizza_index'],
+        'gay_bar_index': dashboard_state['gay_bar_index'],
         'active_locations': dashboard_state['active_locations'],
         'scan_count': dashboard_state['scan_count'],
         'anomaly_count': dashboard_state['anomaly_count'],
         'last_scan_time': dashboard_state['last_scan_time'].strftime('%H:%M:%S') if dashboard_state['last_scan_time'] else 'Never',
         'activity_feed': dashboard_state['activity_feed'],
         'scanner_running': dashboard_state['scanner_running']
-    })
+    }
+    
+    print(f"DEBUG: Sending initial_state: {initial_state}")
+    emit('initial_state', initial_state)
     add_activity_item('CONNECT', f'Dashboard client connected ({request.sid[:8]})', 'normal')
 
 @socketio.on('manual_scan')
@@ -325,6 +383,7 @@ def handle_manual_scan():
 # Initialize with some activity
 add_activity_item('INIT', 'SignalSlice dashboard initialized', 'normal')
 add_activity_item('SYSTEM', 'Monitoring 127 pizza locations in 50-mile radius', 'normal')
+add_activity_item('GAYBAR', '🏳️‍🌈 Gay Bar Index monitoring active', 'normal')
 
 if __name__ == '__main__':
     print("🛰️ SignalSlice Dashboard Starting...")
@@ -340,6 +399,16 @@ if __name__ == '__main__':
         print("\n🛑 Shutting down...")
         stop_scanner()
         print("SignalSlice stopped. Stay vigilant! 🍕")
+
+
+
+
+
+
+
+
+
+
 
 
 

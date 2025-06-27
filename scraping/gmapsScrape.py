@@ -7,10 +7,13 @@ import os
 from playwright.async_api import async_playwright
 import pytz
 from datetime import datetime, timedelta
-
 RESTAURANT_URLS = [
     "https://maps.app.goo.gl/KqSr8hH5GV4ZGJP27",
     # Add more URLs here
+]
+GAY_BAR_URLS = [
+    "https://maps.app.goo.gl/PKRdT6pYjJ4uKEUJA",
+    # Add more gay bar URLs here
 ]
 
 OUTPUT_FILE = "structured_popular_times.csv"
@@ -41,8 +44,10 @@ async def scrape_popular_times(page, restaurant_url, index_offset):
         # Debug: print first few labels to see what we're working with
         if i < 5:
             print(f"🔍 Processing label {i}: '{label}'")
-            print(f"   Pattern test with period: {bool(re.search(r'at (\d{1,2}) (AM|PM)\.', label))}")
-            print(f"   Pattern test without period: {bool(re.search(r'at (\d{1,2}) (AM|PM)', label))}")
+            pattern_with_period = r'at (\d{1,2}) (AM|PM)\.'
+            pattern_without_period = r'at (\d{1,2}) (AM|PM)'
+            print(f"   Pattern test with period: {bool(re.search(pattern_with_period, label))}")
+            print(f"   Pattern test without period: {bool(re.search(pattern_without_period, label))}")
           # Extract the actual hour from the aria-label text - this is the source of truth
         # Note: Google Maps uses Unicode narrow no-break space (\u202f) between hour and AM/PM
         time_match = re.search(r"at (\d{1,2})\u202f(AM|PM)\.?", label)
@@ -116,10 +121,16 @@ async def scrape_current_hour():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-
+        # Process both restaurants and gay bars
+        all_urls = []
         for url in RESTAURANT_URLS:
+            all_urls.append((url, "restaurant"))
+        for url in GAY_BAR_URLS:
+            all_urls.append((url, "gay_bar"))
+            
+        for url, venue_type in all_urls:
             try:
-                print(f"\n🔍 Checking current hour for: {url}")
+                print(f"\n🔍 Checking current hour for: {url} (Type: {venue_type})")
                 
                 await page.goto(url, timeout=60000)
                 await page.wait_for_timeout(4000)
@@ -186,7 +197,8 @@ async def scrape_current_hour():
                                         "timestamp": current_time.isoformat(),
                                         "value": f"{aria} (LIVE DATA - {current_time.strftime('%I:%M %p')})",
                                         "busyness_percent": live_percentage,
-                                        "data_type": "LIVE"
+                                        "data_type": "LIVE",
+                                        "venue_type": venue_type
                                     }
                                     print(f"      🔴 FOUND LIVE PERCENTAGE: {live_percentage}% busy right now!")
                                     break
@@ -208,9 +220,9 @@ async def scrape_current_hour():
                         "busyness_percent": live_text_indicator["estimated_percentage"],
                         "data_type": "LIVE",
                         "live_flag": live_text_indicator["flag"],
-                        "confidence": live_text_indicator["confidence"]
+                        "confidence": live_text_indicator["confidence"],
+                        "venue_type": venue_type
                     }
-
                 # STEP 2: If no live data, get historical data (your existing logic)
                 historical_data = None
                 if not live_data:
@@ -268,7 +280,6 @@ async def scrape_current_hour():
 
                         day_cycles = []
                         current_cycle = []
-                        
                         print(f"  🔄 Analyzing hour cycles to detect days...")
                         print(f"     Looking for 6 AM to mark new day boundaries...")
                         
@@ -295,7 +306,6 @@ async def scrape_current_hour():
                         # Google Maps typically shows data starting from several days ago up to today
                         # The pattern appears to be: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
                         # But the first cycle (index 0) is actually Monday (today), not Sunday
-                        
                         print(f"  📅 Assigning day names to cycles...")
                         print(f"     Current day: {current_weekday}")
                         print(f"     Target day for search: {target_weekday}")
@@ -316,7 +326,6 @@ async def scrape_current_hour():
                             day_offset = cycle_idx
                             actual_day_index = (current_day_index + day_offset) % 7
                             day_names[cycle_idx] = weekdays[actual_day_index]
-                            
                             # Update cycle assignment in scraped data
                             cycle = day_cycles[cycle_idx]
                             cycle_hours = sorted(set(d["display_hour"] for d in cycle))
@@ -349,7 +358,8 @@ async def scrape_current_hour():
                                             "timestamp": current_time.isoformat(),
                                             "value": data["raw_aria_label"] + f" (HISTORICAL - Cycle {cycle_idx})",
                                             "busyness_percent": data["busyness_percent"],
-                                            "data_type": "HISTORICAL"
+                                            "data_type": "HISTORICAL",
+                                            "venue_type": venue_type
                                         }
                                         print(f"    📊 Found historical data: {data['busyness_percent']}% at {data['hour_12']} {data['meridiem']}")
                                         break
@@ -374,7 +384,8 @@ async def scrape_current_hour():
                         "timestamp": current_time.isoformat(),
                         "value": f"No data available for {target_weekday} at hour {target_hour}",
                         "busyness_percent": None,
-                        "data_type": "NO_DATA"
+                        "data_type": "NO_DATA",
+                        "venue_type": venue_type
                     }
                     print(f"  ❌ No data available for {target_weekday} at hour {target_hour}")
 
@@ -391,7 +402,6 @@ async def scrape_current_hour():
     if all_scraped_data:
         scraped_data_file = f"data/all_scraped_data_{current_time.strftime('%Y%m%d_%H%M%S')}.csv"
         os.makedirs("data", exist_ok=True)
-        
         scraped_fieldnames = [
             "scrape_timestamp", "restaurant_url", "element_index", "hour_24", "display_hour",
             "hour_12", "meridiem", "hour_label", "busyness_percent", "raw_aria_label",
@@ -416,7 +426,7 @@ async def scrape_current_hour():
     current_hour_file = f"data/current_hour_{current_time.strftime('%Y%m%d_%H')}.csv"
     os.makedirs("data", exist_ok=True)
     
-    fieldnames = ["restaurant_url", "weekday", "hour_24", "hour_label", "timestamp", "value", "busyness_percent", "data_type"]
+    fieldnames = ["restaurant_url", "weekday", "hour_24", "hour_label", "timestamp", "value", "busyness_percent", "data_type", "venue_type"]
     with open(current_hour_file, "w", newline='', encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -460,3 +470,23 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
     asyncio.run(main())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -18,8 +18,13 @@ class SignalSliceMonitor {
         this.lastUpdateTime = new Date();
         this.lastScanTime = null;        this.socket = null;
         this.pizzaIndex = 3.42;
+        this.gayBarIndex = 6.58;
         this.activeLocations = 127;
         this.lastActivityTimestamp = null;
+        
+        // PERFORMANCE: Throttling variables
+        this.lastActivityUpdate = 0;
+        this.activityUpdateCooldown = 100; // Minimum ms between activity updates
         
         this.init();
     }    init() {
@@ -115,9 +120,13 @@ class SignalSliceMonitor {
                 this.handleActivityUpdate(activity);
             });
             
-            this.socket.on('pizza_index_update', (data) => {
-                this.handlePizzaIndexUpdate(data);
-            });
+                    this.socket.on('pizza_index_update', (data) => {
+            this.handlePizzaIndexUpdate(data);
+        });
+        
+        this.socket.on('gay_bar_index_update', (data) => {
+            this.handleGayBarIndexUpdate(data);
+        });
             
             this.socket.on('scan_stats_update', (stats) => {
                 this.handleScanStatsUpdate(stats);
@@ -146,10 +155,10 @@ class SignalSliceMonitor {
         console.log('Starting HTTP polling fallback...');
         this.addActivityItem('FALLBACK', 'Using HTTP polling for updates', 'warning');
         
-        // Poll every 5 seconds for activity updates
+        // PERFORMANCE: Poll every 10 seconds instead of 5 for activity updates
         setInterval(() => {
             this.fetchActivityUpdates();
-        }, 5000);
+        }, 10000);
         
         // Initial fetch
         this.fetchActivityUpdates();
@@ -199,19 +208,39 @@ class SignalSliceMonitor {
     }
     
     handleInitialState(data) {
-        console.log('Received initial state:', data);
+        console.log('📡 Received initial state:', data);
+        console.log('📊 Pizza Index from server:', data.pizza_index);
+        console.log('🏳️‍🌈 Gay Bar Index from server:', data.gay_bar_index);
         
         // Update dashboard with real initial state
         this.pizzaIndex = data.pizza_index;
+        this.gayBarIndex = data.gay_bar_index || 6.58;
         this.activeLocations = data.active_locations;
         this.scanCount = data.scan_count;
         this.anomalyCount = data.anomaly_count;
         
+        console.log('🔄 Updating UI elements...');
         // Update UI elements
         this.updatePizzaIndex(this.pizzaIndex);
+        this.updateGayBarIndex(this.gayBarIndex);
         this.updateActiveLocations(this.activeLocations);
-        document.getElementById('scan-count').textContent = this.scanCount;
-        document.getElementById('anomaly-count').textContent = this.anomalyCount;
+        
+        const scanCountElement = document.getElementById('scan-count');
+        const anomalyCountElement = document.getElementById('anomaly-count');
+        
+        if (scanCountElement) {
+            scanCountElement.textContent = this.scanCount;
+            console.log('✅ Updated scan count to:', this.scanCount);
+        } else {
+            console.warn('⚠️ scan-count element not found');
+        }
+        
+        if (anomalyCountElement) {
+            anomalyCountElement.textContent = this.anomalyCount;
+            console.log('✅ Updated anomaly count to:', this.anomalyCount);
+        } else {
+            console.warn('⚠️ anomaly-count element not found');
+        }
         
         // Load activity feed
         if (data.activity_feed && data.activity_feed.length > 0) {
@@ -230,13 +259,28 @@ class SignalSliceMonitor {
     }
     
     handleActivityUpdate(activity) {
+        // PERFORMANCE: Throttle activity updates to prevent DOM spam
+        const now = performance.now();
+        if (now - this.lastActivityUpdate < this.activityUpdateCooldown) {
+            return; // Skip this update if too frequent
+        }
+        this.lastActivityUpdate = now;
         this.addActivityItemToFeed(activity);
     }
       handlePizzaIndexUpdate(data) {
-        console.log('Pizza index update:', data);
+        console.log('🍕 Pizza index update received:', data);
+        console.log('Current pizza index:', this.pizzaIndex, '-> New:', data.value);
         this.pizzaIndex = data.value;
         const isAnomaly = data.change > 10 || data.value > 7; // Consider significant changes as anomalies
         this.updatePizzaIndex(this.pizzaIndex, data.change, isAnomaly);
+    }
+    
+    handleGayBarIndexUpdate(data) {
+        console.log('🏳️‍🌈 Gay bar index update received:', data);
+        console.log('Current gay bar index:', this.gayBarIndex, '-> New:', data.value);
+        this.gayBarIndex = data.value;
+        const isAnomaly = data.change > 10 || data.value > 7;
+        this.updateGayBarIndex(this.gayBarIndex, data.change, isAnomaly);
     }
     
     handleScanStatsUpdate(stats) {
@@ -294,7 +338,8 @@ class SignalSliceMonitor {
         if (timeElement) {
             timeElement.textContent = `EST ${timeString}`;
         }
-        setTimeout(() => this.updateSystemTime(), 1000);
+        // PERFORMANCE: Update every 5 seconds instead of every second
+        setTimeout(() => this.updateSystemTime(), 5000);
     }
     
     triggerManualScan() {
@@ -380,6 +425,14 @@ class SignalSliceMonitor {
                 icon = '✅';
                 iconColor = '#10b981';
                 break;
+            case 'PIZZA':
+                icon = '🍕';
+                iconColor = '#f59e0b';
+                break;
+            case 'GAYBAR':
+                icon = '🏳️‍🌈';
+                iconColor = '#a855f7';
+                break;
             default: 
                 icon = '📋'; 
                 iconColor = '#6b7280';
@@ -410,20 +463,15 @@ class SignalSliceMonitor {
             activityElement.style.cssText += borderStyle;
         }
         
-        // Add to beginning of list with optional animation
-        if (animate) {
-            activityElement.style.opacity = '0';
-            activityElement.style.transform = 'translateX(-20px)';
-        }
+        // PERFORMANCE: Simplified DOM insertion without complex animations
         activityList.insertBefore(activityElement, activityList.firstChild);
         
-        // Animate in if requested
+        // Simple fade-in if animation requested
         if (animate) {
+            activityElement.style.opacity = '0.5';
             setTimeout(() => {
-                activityElement.style.transition = 'all 0.3s ease';
                 activityElement.style.opacity = '1';
-                activityElement.style.transform = 'translateX(0)';
-            }, 10);
+            }, 50);
         }
           // Keep only the latest 15 items (increased from 10 for more detailed logs)
         while (activityList.children.length > 15) {
@@ -517,11 +565,17 @@ class SignalSliceMonitor {
         this.updateThreatLevel(Math.min(90, data.pizzaIndex * 10));
     }
       updatePizzaIndex(value, changePercent = null, isAnomaly = false) {
+        console.log(`🍕 updatePizzaIndex called with value: ${value}, change: ${changePercent}`);
         const element = document.getElementById('pizza-index');
         const changeElement = document.getElementById('pizza-change');
         const cardElement = document.getElementById('pizza-index-card');
         
-        if (!element) return;
+        if (!element) {
+            console.error('❌ pizza-index element not found in DOM');
+            return;
+        } else {
+            console.log('✅ Found pizza-index element');
+        }
         
         const currentValue = parseFloat(element.textContent) || 0;
         const change = value - currentValue;
@@ -566,6 +620,59 @@ class SignalSliceMonitor {
         this.pizzaIndex = value;
     }
     
+    updateGayBarIndex(value, changePercent = null, isAnomaly = false) {
+        console.log(`🏳️‍🌈 updateGayBarIndex called with value: ${value}, change: ${changePercent}`);
+        const element = document.getElementById('gay-bar-index');
+        const changeElement = document.getElementById('gay-bar-change');
+        const cardElement = document.getElementById('gay-bar-index-card');
+        
+        if (!element) {
+            console.error('❌ gay-bar-index element not found in DOM');
+            return;
+        } else {
+            console.log('✅ Found gay-bar-index element');
+        }
+        
+        const currentValue = parseFloat(element.textContent) || 0;
+        const change = value - currentValue;
+        const calculatedChangePercent = changePercent !== null ? changePercent : 
+            (currentValue > 0 ? ((change / currentValue) * 100) : 0);
+        
+        this.animateNumber(element, currentValue, value, 1000);
+        
+        if (changeElement) {
+            changeElement.textContent = `${calculatedChangePercent >= 0 ? '+' : ''}${calculatedChangePercent.toFixed(2)}%`;
+            changeElement.className = 'stat-change ' + (calculatedChangePercent >= 0 ? 'positive' : 'negative');
+            
+            // Special styling for anomalies - for gay bars, high value is anomalous
+            if (isAnomaly) {
+                changeElement.style.color = '#ef4444';
+                changeElement.style.fontWeight = 'bold';
+                setTimeout(() => {
+                    changeElement.style.color = '';
+                    changeElement.style.fontWeight = '';
+                }, 5000);
+            }
+        }
+        
+        if (cardElement) {
+            cardElement.className = 'stat-card';
+            if (isAnomaly) {
+                cardElement.classList.add('anomaly-detected');
+                setTimeout(() => {
+                    cardElement.classList.remove('anomaly-detected');
+                }, 5000);
+            } else if (value > 7) {
+                cardElement.classList.add('critical');
+            } else if (value > 5) {
+                cardElement.classList.add('warning');
+            }
+        }
+        
+        // Update stored gay bar index
+        this.gayBarIndex = value;
+    }
+    
     updateActiveLocations(count) {
         const element = document.getElementById('active-locations');
         if (element) {
@@ -577,16 +684,14 @@ class SignalSliceMonitor {
       animateNumber(element, start, end, duration) {
         if (!element) return;
         
-        const range = end - start;
-        const increment = range / (duration / 16);
-        let current = start;
+        // PERFORMANCE: Use requestAnimationFrame instead of setInterval
+        const startTime = performance.now();
         
-        const timer = setInterval(() => {
-            current += increment;
-            if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                current = end;
-                clearInterval(timer);
-            }
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const current = start + (end - start) * progress;
             
             // Format number appropriately
             if (Number.isInteger(end)) {
@@ -594,15 +699,19 @@ class SignalSliceMonitor {
             } else {
                 element.textContent = current.toFixed(2);
             }
-        }, 16);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
         
-        // Visual feedback animation
-        element.style.transform = 'scale(1.1)';
+        requestAnimationFrame(animate);
+        
+        // PERFORMANCE: Reduced visual feedback - no transform scale
         element.style.color = '#fbbf24';
         setTimeout(() => {
-            element.style.transform = 'scale(1)';
             element.style.color = '';
-        }, 300);
+        }, 200); // Reduced duration
     }      initializeChart() {
         const ctx = document.getElementById('realtime-chart');
         if (!ctx) {
@@ -615,7 +724,7 @@ class SignalSliceMonitor {
             timestamps: [],
             values: [],
             anomalies: [], // Track anomaly points
-            maxPoints: 50
+            maxPoints: 20 // PERFORMANCE: Reduced from 50 for better performance
         };
         
         // Initialize with current pizza index
@@ -624,6 +733,7 @@ class SignalSliceMonitor {
         this.chartData.values.push(this.pizzaIndex);
         this.chartData.anomalies.push(false);
         
+        // PERFORMANCE: Simplified chart configuration
         this.chart = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: {
@@ -633,47 +743,23 @@ class SignalSliceMonitor {
                     data: [this.pizzaIndex],
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: (ctx) => {
-                        const index = ctx.dataIndex;
-                        return this.chartData.anomalies[index] ? 8 : 3;
-                    },
-                    pointBackgroundColor: (ctx) => {
-                        const index = ctx.dataIndex;
-                        return this.chartData.anomalies[index] ? '#ef4444' : '#3b82f6';
-                    },
-                    pointBorderColor: (ctx) => {
-                        const index = ctx.dataIndex;
-                        return this.chartData.anomalies[index] ? '#dc2626' : '#2563eb';
-                    },
-                    pointHoverRadius: 8
-                }, {
-                    label: 'Alert Threshold',
-                    data: [5],
-                    borderColor: '#ef4444',
-                    borderDash: [5, 5],
-                    fill: false,
-                    pointRadius: 0
+                    fill: false, // Reduced fill for performance
+                    tension: 0.2, // Reduced tension
+                    pointRadius: 3, // Fixed point size for performance
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#2563eb',
+                    pointHoverRadius: 5
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    intersect: false // Improved hover performance
+                },
                 plugins: {
                     legend: {
                         labels: { color: '#d1d5db' }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => {
-                                const index = context.dataIndex;
-                                const isAnomaly = this.chartData.anomalies[index];
-                                const value = context.parsed.y.toFixed(2);
-                                const label = `Pizza Index: ${value}`;
-                                return isAnomaly ? `🚨 ANOMALY: ${label}` : label;
-                            }
-                        }
                     }
                 },
                 scales: {
@@ -683,10 +769,7 @@ class SignalSliceMonitor {
                     },
                     y: { 
                         ticks: { 
-                            color: '#6b7280',
-                            callback: function(value) {
-                                return value.toFixed(1);
-                            }
+                            color: '#6b7280'
                         },
                         grid: { color: '#374151' },
                         min: 0,
@@ -694,8 +777,8 @@ class SignalSliceMonitor {
                     }
                 },
                 animation: {
-                    duration: 1000,
-                    easing: 'easeInOutQuart'
+                    duration: 500, // Reduced animation duration
+                    easing: 'easeInOut'
                 }
             }
         });
@@ -722,7 +805,6 @@ class SignalSliceMonitor {
         // Update chart data
         this.chart.data.labels.push(timeLabel);
         this.chart.data.datasets[0].data.push(newValue);
-        this.chart.data.datasets[1].data.push(5); // Threshold line
         
         // Keep only the last maxPoints
         if (this.chartData.timestamps.length > this.chartData.maxPoints) {
@@ -731,14 +813,12 @@ class SignalSliceMonitor {
             this.chartData.anomalies.shift();
             this.chart.data.labels.shift();
             this.chart.data.datasets[0].data.shift();
-            this.chart.data.datasets[1].data.shift();
         }
         
-        // Update chart with animation if it's an anomaly
-        const animationDuration = isAnomaly ? 2000 : 1000;
-        this.chart.update({ duration: animationDuration });
+        // PERFORMANCE: Reduced chart update animation
+        this.chart.update({ duration: 200 });
         
-        // Flash chart if anomaly
+        // Flash chart if anomaly (simplified)
         if (isAnomaly) {
             this.flashChart();
         }
@@ -747,13 +827,12 @@ class SignalSliceMonitor {
     flashChart() {
         const chartContainer = document.querySelector('.chart-container');
         if (chartContainer) {
-            chartContainer.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.8)';
-            chartContainer.style.border = '2px solid #ef4444';
+            // PERFORMANCE: Simplified flash effect - just add/remove class
+            chartContainer.classList.add('anomaly-flash');
             
             setTimeout(() => {
-                chartContainer.style.boxShadow = '';
-                chartContainer.style.border = '';
-            }, 3000);
+                chartContainer.classList.remove('anomaly-flash');
+            }, 1500); // Reduced duration
         }
     }
     
@@ -853,7 +932,7 @@ class SignalSliceMonitor {
                 opacity: 0.6
             }).addTo(this.map);
             
-            this.generateSurveillancePoints();
+            // PERFORMANCE: Removed generateSurveillancePoints() - very resource intensive
         } catch (error) {
             console.error('Error initializing map:', error);
             this.addActivityItem('ERROR', 'Failed to initialize surveillance map', 'critical');
@@ -959,7 +1038,9 @@ class SignalSliceMonitor {
             'CALIBRATE': '⚙️',
             'ERROR': '❌',
             'ENROLL': '👤',
-            'UPDATE': '📊'
+            'UPDATE': '📊',
+            'GAYBAR': '🏳️‍🌈',
+            'PIZZA': '🍕'
         };
         
         item.innerHTML = `
@@ -1196,3 +1277,7 @@ notificationStyles.textContent = `
     }
 `;
 document.head.appendChild(notificationStyles);
+
+
+
+
