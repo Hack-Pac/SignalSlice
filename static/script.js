@@ -22,9 +22,14 @@ class SignalSliceMonitor {
         this.activeLocations = 127;
         this.lastActivityTimestamp = null;
         
-        // PERFORMANCE: Throttling variables
+        // MEMORY OPTIMIZATION: Improved throttling and limits
         this.lastActivityUpdate = 0;
-        this.activityUpdateCooldown = 100; // Minimum ms between activity updates
+        this.activityUpdateCooldown = 500; // Increased from 100ms to 500ms
+        this.maxActivityItems = 10; // Reduced from 15 to 10
+        this.maxChartPoints = 15; // Reduced from 20 to 15
+        
+        // MEMORY: Use WeakMap for temporary data caching
+        this.tempDataCache = new WeakMap();
         
         this.init();
     }    init() {
@@ -155,10 +160,10 @@ class SignalSliceMonitor {
         console.log('Starting HTTP polling fallback...');
         this.addActivityItem('FALLBACK', 'Using HTTP polling for updates', 'warning');
         
-        // PERFORMANCE: Poll every 10 seconds instead of 5 for activity updates
+        // MEMORY OPTIMIZATION: Poll every 15 seconds to reduce memory pressure
         setInterval(() => {
             this.fetchActivityUpdates();
-        }, 10000);
+        }, 15000);
         
         // Initial fetch
         this.fetchActivityUpdates();
@@ -195,15 +200,21 @@ class SignalSliceMonitor {
     }
     
     updateActivityFeedFromData(activities) {
-        // Clear existing feed and rebuild from server data
+        // MEMORY OPTIMIZATION: Clear existing feed and rebuild with limited data
         const activityList = document.getElementById('activity-feed');
         if (activityList) {
             activityList.innerHTML = '';
             
+            // Only take the latest activities up to our limit
+            const limitedActivities = activities.slice(0, this.maxActivityItems);
+            
             // Add each activity from the server
-            activities.forEach(activity => {
+            limitedActivities.forEach(activity => {
                 this.addActivityItemToFeed(activity, false); // Don't animate for bulk updates
             });
+            
+            // Update internal data array efficiently
+            this.activityData = [...limitedActivities];
         }
     }
     
@@ -242,9 +253,11 @@ class SignalSliceMonitor {
             console.warn('⚠️ anomaly-count element not found');
         }
         
-        // Load activity feed
+        // MEMORY OPTIMIZATION: Load activity feed with limits
         if (data.activity_feed && data.activity_feed.length > 0) {
-            data.activity_feed.forEach(activity => {
+            // Only load the latest activities up to our limit
+            const limitedFeed = data.activity_feed.slice(0, this.maxActivityItems);
+            limitedFeed.forEach(activity => {
                 this.addActivityItemToFeed(activity);
             });
         }
@@ -256,6 +269,47 @@ class SignalSliceMonitor {
         }
         
         this.updateLastUpdateIndicator();
+        
+        // MEMORY OPTIMIZATION: Start periodic cleanup
+        this.startMemoryCleanup();
+    }
+    
+    // MEMORY OPTIMIZATION: Periodic memory cleanup
+    startMemoryCleanup() {
+        setInterval(() => {
+            this.performMemoryCleanup();
+        }, 30000); // Clean up every 30 seconds
+    }
+    
+    performMemoryCleanup() {
+        // Force garbage collection of temporary data
+        this.tempDataCache = new WeakMap();
+        
+        // Ensure arrays don't exceed limits
+        if (this.activityData.length > this.maxActivityItems) {
+            this.activityData.splice(this.maxActivityItems);
+        }
+        
+        // Clean up chart data if it exists
+        if (this.chartData) {
+            if (this.chartData.timestamps.length > this.maxChartPoints) {
+                const excess = this.chartData.timestamps.length - this.maxChartPoints;
+                this.chartData.timestamps.splice(0, excess);
+                this.chartData.values.splice(0, excess);
+                this.chartData.anomalies.splice(0, excess);
+            }
+        }
+        
+        // Clean up DOM elements if activity feed has too many children
+        const activityList = document.getElementById('activity-feed');
+        if (activityList && activityList.children.length > this.maxActivityItems) {
+            while (activityList.children.length > this.maxActivityItems) {
+                const lastChild = activityList.lastChild;
+                if (lastChild) {
+                    lastChild.parentNode.removeChild(lastChild);
+                }
+            }
+        }
     }
     
     handleActivityUpdate(activity) {
@@ -338,8 +392,8 @@ class SignalSliceMonitor {
         if (timeElement) {
             timeElement.textContent = `EST ${timeString}`;
         }
-        // PERFORMANCE: Update every 5 seconds instead of every second
-        setTimeout(() => this.updateSystemTime(), 5000);
+        // MEMORY OPTIMIZATION: Update every 10 seconds to reduce operations
+        setTimeout(() => this.updateSystemTime(), 10000);
     }
     
     triggerManualScan() {
@@ -473,29 +527,20 @@ class SignalSliceMonitor {
                 activityElement.style.opacity = '1';
             }, 50);
         }
-          // Keep only the latest 15 items (increased from 10 for more detailed logs)
-        while (activityList.children.length > 15) {
+          // MEMORY OPTIMIZATION: Keep only limited items and clean up efficiently
+        while (activityList.children.length > this.maxActivityItems) {
             const lastChild = activityList.lastChild;
             if (lastChild) {
-                if (animate) {
-                    lastChild.style.transition = 'all 0.3s ease';
-                    lastChild.style.opacity = '0';
-                    lastChild.style.transform = 'translateX(20px)';
-                    setTimeout(() => {
-                        if (lastChild.parentNode) {
-                            lastChild.parentNode.removeChild(lastChild);
-                        }
-                    }, 300);
-                } else {
-                    lastChild.parentNode.removeChild(lastChild);
-                }
+                // Remove immediately without animation to save memory
+                lastChild.parentNode.removeChild(lastChild);
             }
         }
         
-        // Store in activity data array
+        // MEMORY: Store in activity data array with strict limits
         this.activityData.unshift(activity);
-        if (this.activityData.length > 15) {
-            this.activityData = this.activityData.slice(0, 15);
+        if (this.activityData.length > this.maxActivityItems) {
+            // Use splice instead of slice to modify in-place
+            this.activityData.splice(this.maxActivityItems);
         }
         
         // Auto-scroll to top if user is near top
@@ -719,12 +764,12 @@ class SignalSliceMonitor {
             return;
         }
         
-        // Initialize chart data tracking
+        // MEMORY OPTIMIZATION: Initialize chart data tracking with strict limits
         this.chartData = {
             timestamps: [],
             values: [],
             anomalies: [], // Track anomaly points
-            maxPoints: 20 // PERFORMANCE: Reduced from 50 for better performance
+            maxPoints: this.maxChartPoints // Use configurable limit
         };
         
         // Initialize with current pizza index
@@ -806,13 +851,15 @@ class SignalSliceMonitor {
         this.chart.data.labels.push(timeLabel);
         this.chart.data.datasets[0].data.push(newValue);
         
-        // Keep only the last maxPoints
+        // MEMORY OPTIMIZATION: Keep only the last maxPoints with efficient cleanup
         if (this.chartData.timestamps.length > this.chartData.maxPoints) {
-            this.chartData.timestamps.shift();
-            this.chartData.values.shift();
-            this.chartData.anomalies.shift();
-            this.chart.data.labels.shift();
-            this.chart.data.datasets[0].data.shift();
+            // Remove multiple items at once to reduce operations
+            const removeCount = this.chartData.timestamps.length - this.chartData.maxPoints;
+            this.chartData.timestamps.splice(0, removeCount);
+            this.chartData.values.splice(0, removeCount);
+            this.chartData.anomalies.splice(0, removeCount);
+            this.chart.data.labels.splice(0, removeCount);
+            this.chart.data.datasets[0].data.splice(0, removeCount);
         }
         
         // PERFORMANCE: Reduced chart update animation
@@ -863,27 +910,6 @@ class SignalSliceMonitor {
         return data;
     }
     
-    updateChartData(newValue) {
-        if (!this.chart) return;
-        
-        const now = new Date();
-        const timeLabel = now.toLocaleTimeString('en-US', { 
-            hour12: false, 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
-        
-        this.chart.data.labels.push(timeLabel);
-        this.chart.data.datasets[0].data.push(newValue);
-        
-        if (this.chart.data.labels.length > 20) {
-            this.chart.data.labels.shift();
-            this.chart.data.datasets[0].data.shift();
-            this.chart.data.datasets[1].data.shift();
-        }
-        
-        this.chart.update('none');
-    }
       initializeMap() {
         const mapElement = document.getElementById('surveillance-map');
         if (!mapElement) {
@@ -932,132 +958,32 @@ class SignalSliceMonitor {
                 opacity: 0.6
             }).addTo(this.map);
             
-            // PERFORMANCE: Removed generateSurveillancePoints() - very resource intensive
+            // MEMORY OPTIMIZATION: Surveillance points generation completely removed to save memory
         } catch (error) {
             console.error('Error initializing map:', error);
             this.addActivityItem('ERROR', 'Failed to initialize surveillance map', 'critical');
         }
     }
     
-    generateSurveillancePoints() {
-        const pentagonCoords = [38.8719, -77.0563];
-        const locations = [
-            'Domino\'s', 'Pizza Hut', 'Papa John\'s', 'Little Caesars',
-            'Blaze Pizza', 'Marco\'s Pizza', 'Papa Murphy\'s', 'Sbarro'
-        ];
-        
-        for (let i = 0; i < 127; i++) {
-            const angle = Math.random() * 2 * Math.PI;
-            const distance = Math.random() * 0.6;
-            
-            const lat = pentagonCoords[0] + (distance * Math.cos(angle));
-            const lng = pentagonCoords[1] + (distance * Math.sin(angle));
-            
-            const activity = Math.random();
-            let color, status, orders;
-            
-            if (activity > 0.8) {
-                color = '#ef4444';
-                status = 'HIGH';
-                orders = Math.floor(Math.random() * 30) + 20;
-            } else if (activity > 0.5) {
-                color = '#fbbf24';
-                status = 'MEDIUM';
-                orders = Math.floor(Math.random() * 15) + 10;
-            } else {
-                color = '#10b981';
-                status = 'NORMAL';
-                orders = Math.floor(Math.random() * 8) + 2;
-            }
-            
-            const marker = L.divIcon({
-                className: 'surveillance-point',
-                html: `<div style="
-                    background: ${color}; 
-                    width: 8px; 
-                    height: 8px; 
-                    border-radius: 50%; 
-                    border: 1px solid white;
-                    box-shadow: 0 0 10px ${color}50;
-                "></div>`,
-                iconSize: [8, 8],
-                iconAnchor: [4, 4]
-            });
-            
-            const location = locations[Math.floor(Math.random() * locations.length)];
-            
-            L.marker([lat, lng], { icon: marker })
-                .addTo(this.map)
-                .bindPopup(`
-                    <div style="font-family: monospace; font-size: 12px;">
-                        <b>${location}</b><br>
-                        Status: ${status}<br>
-                        Orders/hr: ${orders}<br>
-                        <small>Last scan: ${Math.floor(Math.random() * 10) + 1}min ago</small>
-                    </div>
-                `);
-        }
-    }
+    // MEMORY OPTIMIZATION: Removed generateSurveillancePoints() entirely to prevent memory bloat
+    // Original method generated 127 DOM elements with complex styling causing memory issues
     
     generateInitialActivity() {
+        // MEMORY OPTIMIZATION: Reduced initial activities to prevent memory buildup
         const activities = [
             { type: 'INIT', message: 'Surveillance system online - 127 locations monitored', level: 'normal' },
-            { type: 'SCAN', message: 'Last automated sweep: Pentagon area secure', level: 'normal' },
             { type: 'CONNECT', message: 'Real-time data feeds established', level: 'normal' },
-            { type: 'CALIBRATE', message: 'Baseline algorithms synchronized', level: 'normal' },
-            { type: 'ANOMALY', message: 'Minor spike detected at Papa John\'s Arlington - resolved', level: 'warning' },
             { type: 'SCAN', message: 'Google Maps API: 127 active locations confirmed', level: 'normal' }
         ];
         
         activities.forEach((activity, index) => {
             setTimeout(() => {
                 this.addActivityItem(activity.type, activity.message, activity.level);
-            }, index * 300);
+            }, index * 500); // Increased delay to reduce rapid DOM updates
         });
     }
     
-    addActivityItem(type, message, level = 'normal') {
-        const feed = document.getElementById('activity-feed');
-        if (!feed) return;
-        
-        const time = new Date().toLocaleTimeString('en-US', { 
-            hour12: false, 
-            hour: '2-digit', 
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        
-        const item = document.createElement('div');
-        item.className = `activity-item ${level}`;
-        
-        const icons = {
-            'SCAN': '🔍',
-            'ANOMALY': '🚨',
-            'INIT': '⚡',
-            'CONNECT': '🔗',
-            'CALIBRATE': '⚙️',
-            'ERROR': '❌',
-            'ENROLL': '👤',
-            'UPDATE': '📊',
-            'GAYBAR': '🏳️‍🌈',
-            'PIZZA': '🍕'
-        };
-        
-        item.innerHTML = `
-            <div class="activity-time">${time}</div>
-            <div class="activity-content">
-                <div class="activity-title">${icons[type] || '📊'} ${type}</div>
-                <div class="activity-desc">${message}</div>
-            </div>
-        `;
-        
-        feed.insertBefore(item, feed.firstChild);
-        
-        // Remove old items (keep last 10)
-        while (feed.children.length > 10) {
-            feed.removeChild(feed.lastChild);
-        }
-    }
+    // MEMORY OPTIMIZATION: Removed duplicate addActivityItem method - using the optimized version above
     
     updateThreatLevel(percentage) {
         const fill = document.getElementById('threat-fill');
@@ -1176,14 +1102,6 @@ class SignalSliceMonitor {
             });
         }
         
-        // Email form
-        const form = document.getElementById('watchlist-form');
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleEmailSignup();
-            });
-        }
           // Add manual scan button to map controls
         const mapControls = document.querySelector('.map-controls');
         if (mapControls) {
@@ -1219,21 +1137,6 @@ class SignalSliceMonitor {
         this.chart.update();
     }
     
-    handleEmailSignup() {
-        const emailInput = document.getElementById('email-input');
-        if (!emailInput) return;
-        
-        const email = emailInput.value;
-        if (!email) return;
-        
-        this.showNotification('Processing secure enrollment...', 'info');
-        
-        setTimeout(() => {
-            emailInput.value = '';
-            this.showNotification('✅ Enrolled in classified watchlist', 'success');
-            this.addActivityItem('ENROLL', `New watchlist member: ${email.split('@')[0]}@***`, 'normal');
-        }, 2000);
-    }
     
     getRandomAnomalyType() {
         const types = [
@@ -1277,6 +1180,8 @@ notificationStyles.textContent = `
     }
 `;
 document.head.appendChild(notificationStyles);
+
+
 
 
 

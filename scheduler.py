@@ -84,7 +84,6 @@ async def hourly_scan():
         
     except Exception as e:
         logger.error(f"❌ Error during hourly scan: {e}")
-
 async def main():
     """Main scheduler loop"""
     logger.info("🛰️ SignalSlice Scanner Starting...")
@@ -117,6 +116,8 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
 
 
 

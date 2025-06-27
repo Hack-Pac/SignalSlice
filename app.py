@@ -86,7 +86,6 @@ def update_gay_bar_index(new_value, change_percent=0):
     
     print(f"DEBUG: Emitting gay_bar_index_update: {data}")
     socketio.emit('gay_bar_index_update', data)
-
 def update_scan_stats():
     """Update scan statistics"""
     dashboard_state['scan_count'] += 1
@@ -186,7 +185,6 @@ async def run_scanner_cycle():
             new_index = min(10.0, dashboard_state['pizza_index'] + 1.5)
             change_percent = ((new_index - dashboard_state['pizza_index']) / dashboard_state['pizza_index']) * 100
             update_pizza_index(new_index, change_percent)
-            
             # Emit anomaly alert
             socketio.emit('anomaly_detected', {
                 'title': 'ANOMALY DETECTED',
@@ -209,7 +207,6 @@ async def run_scanner_cycle():
         
         completion_time = datetime.now(EST)
         add_activity_item('SYSTEM', f'✅ Scan completed at {completion_time.strftime("%H:%M:%S EST")}', 'success')
-        
         # Calculate and announce next scan
         next_scan_seconds = get_next_hour_start()
         next_scan_time = datetime.now(EST) + timedelta(seconds=next_scan_seconds)
@@ -399,6 +396,9 @@ if __name__ == '__main__':
         print("\n🛑 Shutting down...")
         stop_scanner()
         print("SignalSlice stopped. Stay vigilant! 🍕")
+
+
+
 
 
 

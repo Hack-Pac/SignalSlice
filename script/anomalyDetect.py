@@ -5,9 +5,7 @@ import logging
 import sys
 from datetime import datetime, timedelta
 import pytz
-
 THRESHOLD = 25  # how much higher than baseline to consider an anomaly
-
 def setup_logging():
     """Setup logging with UTF-8 encoding"""
     try:
@@ -133,6 +131,8 @@ def check_current_anomalies():
 # Check for current anomalies when the script is run
 if __name__ == "__main__":
     check_current_anomalies()
+
+
 
 
 
