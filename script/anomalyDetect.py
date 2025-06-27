@@ -50,14 +50,11 @@ def check_current_anomalies():
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
     current_hour_pattern = f"current_hour_{current_time_est.strftime('%Y%m%d_%H')}.csv"
     current_hour_file = os.path.join(data_dir, current_hour_pattern)
-    
     if not os.path.exists(current_hour_file):
         print(f"⚠️ No current hour data file found: {current_hour_file}")
         return False
-
     print("🔍 Checking for anomalies...\n")
     anomalies_found = False
-
     with open(current_hour_file, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -97,7 +94,6 @@ def check_current_anomalies():
             
             # Enhanced anomaly detection with text flags
             is_threshold_anomaly = diff >= THRESHOLD
-            
             if is_threshold_anomaly or has_live_text_flag:
                 if data_type == "LIVE" and has_live_text_flag:
                     anomaly_prefix = "🚨🔴🚨 CRITICAL LIVE ANOMALY"
@@ -123,7 +119,6 @@ def check_current_anomalies():
             else:
                 status_icon = "✅🔴" if data_type == "LIVE" else "✅"
                 print(f"{status_icon} Normal activity at {row['restaurant_url']}: {current}% (baseline: {expected}%) [{data_type}]")
-            
             print()
 
     return anomalies_found
@@ -131,6 +126,17 @@ def check_current_anomalies():
 # Check for current anomalies when the script is run
 if __name__ == "__main__":
     check_current_anomalies()
+
+
+
+
+
+
+
+
+
+
+
 
 
 

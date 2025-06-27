@@ -12,7 +12,6 @@
 <body>    <!-- Animated Grid Background -->
     <div class="surveillance-grid"></div>
     <div class="radar-sweep"></div>
-    
     <!-- Header with Live Status -->
     <header class="header">
         <div class="container">
@@ -267,38 +266,44 @@
             </div>
         </section>
 
-        <!-- Historical Data Section -->
-        <section class="historical-section">
+        <!-- Pizza Reports Section -->
+        <section class="pizza-reports-section">
             <div class="container">
-                <div class="section-header">                    <h2>
-                        <svg viewBox="0 0 24 24" class="history-icon">
-                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                            <polyline points="12,6 12,12 16,14" fill="none" stroke="currentColor" stroke-width="2"/>
+                <div class="section-header">
+                    <h2>
+                        <svg viewBox="0 0 24 24" class="twitter-icon">
+                            <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" fill="none" stroke="currentColor" stroke-width="2"/>
                         </svg>
-                        HISTORICAL DATA
+                        PIZZA REPORTS
                     </h2>
+                    <div class="twitter-handle">
+                        <span>@PenPizzaReport</span>
+                    </div>
                 </div>
-                <div class="history-grid">
-                    <div class="history-card">
-                        <h4>PATTERN ANALYSIS</h4>
-                        <div class="pattern-viz" id="pattern-viz"></div>
-                        <p>Correlation patterns identified across <strong>4.7 years</strong> of monitoring data</p>
-                    </div>
-                    <div class="history-card">
-                        <h4>PREDICTION ACCURACY</h4>
-                        <div class="accuracy-meter">
-                            <div class="accuracy-fill" style="width: 89%"></div>
+                <div class="twitter-link-container">
+                    <div class="twitter-link-card">
+                        <h4>📊 Real-time Pizza Intelligence Updates</h4>
+                        <p>Follow @PenPizzaReport on X (Twitter) for live updates on Pentagon pizza activity patterns, anomaly alerts, and data-driven analysis of DC's most watched pizzerias.</p>
+                        <a href="https://twitter.com/PenPizzaReport" target="_blank" rel="noopener noreferrer" class="twitter-follow-button">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/>
+                            </svg>
+                            View on X / Twitter
+                        </a>
+                        <div class="twitter-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">UPDATE FREQUENCY</span>
+                                <span class="stat-value">HOURLY</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">ANALYSIS TYPE</span>
+                                <span class="stat-value">OSINT</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">MONITORING</span>
+                                <span class="stat-value">24/7</span>
+                            </div>
                         </div>
-                        <p><strong>89% accuracy</strong> in predicting activity anomalies</p>
-                    </div>
-                    <div class="history-card">
-                        <h4>NOTABLE EVENTS</h4>
-                        <div class="events-list">
-                            <div class="event-marker critical"></div>
-                            <div class="event-marker warning"></div>
-                            <div class="event-marker normal"></div>
-                        </div>
-                        <p><strong>23 successful predictions</strong> of unusual activity patterns</p>
                     </div>
                 </div>
             </div>
@@ -333,12 +338,28 @@
                 <line x1="50" y1="50" x2="50" y2="5" stroke="#3b82f6" stroke-width="2" class="radar-line"/>
             </svg>
             <p>SCANNING MONITORING ZONE...</p>        </div>    </div>
-
     <!-- SocketIO for real-time communication -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    
+    <!-- Twitter Widget Script removed - using simple link instead -->
+    
     <script src="/static/script.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

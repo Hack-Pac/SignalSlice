@@ -15,7 +15,6 @@ GAY_BAR_URLS = [
     "https://maps.app.goo.gl/PKRdT6pYjJ4uKEUJA",
     # Add more gay bar URLs here
 ]
-
 OUTPUT_FILE = "structured_popular_times.csv"
 DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 START_HOUR = 6
@@ -66,7 +65,6 @@ async def scrape_popular_times(page, restaurant_url, index_offset):
                 hour_24 = hour_12 if hour_12 == 12 else hour_12 + 12
             
             hour_label = f"{hour_12} {meridiem}"
-            
             # Debug: print successful extraction
             if i < 5:
                 print(f"✅ Extracted: {hour_12} {meridiem} -> {hour_24}")
@@ -171,12 +169,10 @@ async def scrape_current_hour():
                     '[aria-label*="right now"], [aria-label*="Right now"]',
                     '[aria-label*="currently"], [aria-label*="Currently"]',
                 ]
-                
                 for selector in live_percentage_selectors:
                     try:
                         elements = await page.query_selector_all(selector)
                         print(f"    📊 Checking selector '{selector}': found {len(elements)} elements")
-                        
                         for el in elements:
                             aria = await el.get_attribute('aria-label')
                             if not aria:
@@ -338,7 +334,6 @@ async def scrape_current_hour():
                                 data["assigned_weekday"] = day_names[cycle_idx]
                                 data["day_offset"] = day_offset
                                 data["is_today_cycle"] = cycle_idx == 0  # Cycle 0 is today
-                            
                             print(f"    Cycle {cycle_idx} = {day_names[cycle_idx]} (today + {day_offset} days)")
                             print(f"       Hours: {cycle_hours}")
 
@@ -470,6 +465,22 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
     asyncio.run(main())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

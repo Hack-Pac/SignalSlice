@@ -15,6 +15,7 @@ import logging
 import re
 from script.anomalyDetect import check_current_anomalies
 from scraping.gmapsScrape import scrape_current_hour
+# Twitter fetcher removed - using simple link instead
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'signalslice-pizza-monitor-2024'
@@ -63,7 +64,6 @@ def update_pizza_index(new_value, change_percent=0):
     """Update pizza index and emit to clients"""
     old_value = dashboard_state['pizza_index']
     dashboard_state['pizza_index'] = new_value
-    
     data = {
         'value': new_value,
         'change': change_percent,
@@ -109,7 +109,6 @@ async def run_scanner_cycle():
     try:
         dashboard_state['scanning'] = True
         socketio.emit('scanning_start')
-        
         current_time = datetime.now(EST)
         add_activity_item('SCAN', f'🕐 Starting hourly scan at {current_time.strftime("%Y-%m-%d %H:%M:%S EST")}', 'normal')
         
@@ -346,6 +345,8 @@ def stop_scanner_endpoint():
     else:
         return jsonify({'status': 'scanner_not_running'})
 
+# Twitter API endpoint removed - using simple link instead
+
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection"""
@@ -361,7 +362,6 @@ def handle_connect():
         'activity_feed': dashboard_state['activity_feed'],
         'scanner_running': dashboard_state['scanner_running']
     }
-    
     print(f"DEBUG: Sending initial_state: {initial_state}")
     emit('initial_state', initial_state)
     add_activity_item('CONNECT', f'Dashboard client connected ({request.sid[:8]})', 'normal')
@@ -389,13 +389,22 @@ if __name__ == '__main__':
     
     # Start the scanner automatically
     start_scanner()
-    
     try:
         socketio.run(app, debug=False, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
         print("\n🛑 Shutting down...")
         stop_scanner()
         print("SignalSlice stopped. Stay vigilant! 🍕")
+
+
+
+
+
+
+
+
+
+
 
 
 

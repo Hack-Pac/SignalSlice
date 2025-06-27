@@ -46,7 +46,6 @@ def get_next_hour_start():
     now = datetime.now(EST)
     next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
     return (next_hour - now).total_seconds()
-
 def clean_log_message(message):
     """Remove emojis from log messages for Windows compatibility"""
     # Remove emojis and other problematic Unicode characters
@@ -79,7 +78,6 @@ async def hourly_scan():
             logger.warning("🚨 ANOMALIES DETECTED! Check the output above.")
         else:
             logger.info("✅ No anomalies detected this hour.")
-            
         logger.info(f"✅ Scan completed at {datetime.now(EST).strftime('%H:%M:%S EST')}")
         
     except Exception as e:
@@ -102,7 +100,6 @@ async def main():
             
             # Sleep until next hour (with small buffer to ensure we're past the hour mark)
             await asyncio.sleep(sleep_seconds + 30)
-            
             # Run the scan
             await hourly_scan()
             
@@ -116,6 +113,15 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+
+
+
+
+
+
+
 
 
 

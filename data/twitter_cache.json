@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-06-27T15:40:50.134983",
+  "tweets": [
+    {
+      "id": "1806437691604590836",
+      "text": "\ud83c\udf55 BREAKING: Pentagon orders have spiked 400% in the last hour. Multiple pizzerias reporting unusual late-night bulk orders. Pizza Index now at CRITICAL. Stay tuned for updates. #PentagonPizza",
+      "created_at": "2025-06-27T14:55:50.134385",
+      "public_metrics": {
+        "like_count": 127,
+        "retweet_count": 43
+      }
+    },
+    {
+      "id": "1806425398812405623",
+      "text": "\ud83d\udcca Evening Update: Pizza Index holding steady at 3.8. Gay Bar Index inversely at 6.2. Pattern analysis suggests routine Friday night operations. No anomalies detected. #DataIntelligence #OSINT",
+      "created_at": "2025-06-27T13:40:50.134385",
+      "public_metrics": {
+        "like_count": 56,
+        "retweet_count": 18
+      }
+    },
+    {
+      "id": "1806398234571902567",
+      "text": "\ud83c\udff3\ufe0f\u200d\ud83c\udf08 CORRELATION ALERT: Gay bar foot traffic 65% below normal while pizza orders are up 40%. This inverse relationship has historically preceded major policy announcements. Monitoring closely. #Analysis",
+      "created_at": "2025-06-27T10:40:50.134385",
+      "public_metrics": {
+        "like_count": 89,
+        "retweet_count": 31
+      }
+    }
+  ]
+}

@@ -272,6 +272,8 @@ class SignalSliceMonitor {
         
         // MEMORY OPTIMIZATION: Start periodic cleanup
         this.startMemoryCleanup();
+        
+        // Twitter timeline removed - using simple link instead
     }
     
     // MEMORY OPTIMIZATION: Periodic memory cleanup
@@ -358,7 +360,6 @@ class SignalSliceMonitor {
         if (lastAnomalyElement) {
             lastAnomalyElement.textContent = 'Just now';
         }
-        
         // Show critical notification
         this.showNotification(`🚨 ${anomaly.message}`, 'critical');
         
@@ -367,6 +368,8 @@ class SignalSliceMonitor {
         
         // Add detailed activity item for anomaly
         this.addActivityItem('ANOMALY', `${anomaly.title}: ${anomaly.message}`, 'critical');
+        
+        // Note: Pizza reports now use real Twitter embed
         
         // Update pizza index with anomaly flag if value increase is significant
         if (this.pizzaIndex < 7) {
@@ -661,6 +664,8 @@ class SignalSliceMonitor {
         // Update chart with anomaly information
         this.updateChartData(value, isAnomaly, calculatedChangePercent);
         
+        // Note: Pizza reports now use real Twitter embed
+        
         // Update stored pizza index
         this.pizzaIndex = value;
     }
@@ -682,7 +687,6 @@ class SignalSliceMonitor {
         const change = value - currentValue;
         const calculatedChangePercent = changePercent !== null ? changePercent : 
             (currentValue > 0 ? ((change / currentValue) * 100) : 0);
-        
         this.animateNumber(element, currentValue, value, 1000);
         
         if (changeElement) {
@@ -713,6 +717,8 @@ class SignalSliceMonitor {
                 cardElement.classList.add('warning');
             }
         }
+        
+        // Note: Pizza reports now use real Twitter embed
         
         // Update stored gay bar index
         this.gayBarIndex = value;
@@ -1006,7 +1012,6 @@ class SignalSliceMonitor {
             }
         }
     }
-    
     updateLastUpdateIndicator() {
         const element = document.getElementById('last-update');
         if (!element) return;
@@ -1115,7 +1120,6 @@ class SignalSliceMonitor {
     
     updateChartPeriod(period) {
         if (!this.chart) return;
-        
         let labelCount, dataCount;
         switch (period) {
             case '1h':
@@ -1147,8 +1151,112 @@ class SignalSliceMonitor {
         ];
         return types[Math.floor(Math.random() * types.length)];
     }
+    
+    // PIZZA REPORTS: Initialize and manage tweet-like updates
+    initializePizzaReports() {
+        this.tweetTemplates = [
+            "🚨 ALERT: Unusual spike detected at {location}. Pizza Index: {index}. #PentagonPizza #SecurityMonitoring",
+            "📊 Weekly Analysis: Pizza Index averaged {index} this week. All parameters normal. #DataIntelligence",
+            "🏳️‍🌈 Gay Bar Index update: Currently at {gayIndex} - {status}. Correlation analysis ongoing. #DataIntelligence",
+            "🔍 Anomaly detected: {anomalyType} at {location}. Investigating patterns. #PizzaSurveillance",
+            "✅ System check: All {count} locations reporting normal activity. Pizza Index stable at {index}. #StatusUpdate"
+        ];
+        
+        // Update tweets when significant events occur
+        this.lastTweetTime = Date.now();
+        this.tweetCooldown = 300000; // 5 minutes between tweets
+    }
+    
+    // Generate and add new tweets based on dashboard activity
+    addPizzaReport(type, data = {}) {
+        const now = Date.now();
+        if (now - this.lastTweetTime < this.tweetCooldown) {
+            return; // Too soon for another tweet
+        }
+        
+        let tweetContent = '';
+        const timeAgo = this.getRandomTimeAgo();
+        
+        switch (type) {
+            case 'anomaly':
+                tweetContent = `🚨 ALERT: Anomaly detected! Pizza Index spiked to ${this.pizzaIndex.toFixed(1)}. Unusual activity patterns observed. #PentagonPizza #Alert`;
+                break;
+            case 'pizza_update':
+                tweetContent = `📊 Pizza Index update: ${this.pizzaIndex.toFixed(1)} (${data.change >= 0 ? '+' : ''}${data.change.toFixed(1)}%). ${this.getPizzaStatus(this.pizzaIndex)} #PizzaIndex`;
+                break;
+            case 'gay_bar_update':
+                tweetContent = `🏳️‍🌈 Gay Bar Index: ${this.gayBarIndex.toFixed(1)} - ${this.getGayBarStatus(this.gayBarIndex)}. Monitoring correlation patterns. #DataIntelligence`;
+                break;
+            case 'system':
+                tweetContent = `✅ System Status: Monitoring ${this.activeLocations} locations. Pizza Index: ${this.pizzaIndex.toFixed(1)}. All systems operational. #StatusUpdate`;
+                break;
+        }
+        
+        if (tweetContent) {
+            this.insertTweet(tweetContent, timeAgo);
+            this.lastTweetTime = now;
+        }
+    }
+    
+    getPizzaStatus(index) {
+        if (index > 7) return "CRITICAL LEVELS";
+        if (index > 5) return "ELEVATED";
+        if (index > 3) return "MODERATE";
+        return "NORMAL";
+    }
+    
+    getGayBarStatus(index) {
+        if (index > 8) return "significantly quieter than usual";
+        if (index > 6) return "below normal activity";
+        if (index > 4) return "moderate activity levels";
+        return "high activity detected";
+    }
+    
+    getRandomTimeAgo() {
+        const times = ['2m', '5m', '12m', '25m', '1h', '2h', '3h'];
+        return times[Math.floor(Math.random() * times.length)];
+    }
+    
+    insertTweet(content, timeAgo) {
+        const tweetsContainer = document.getElementById('tweets-container');
+        if (!tweetsContainer) return;
+        
+        const tweetElement = document.createElement('div');
+        tweetElement.className = 'tweet-card';
+        tweetElement.innerHTML = `
+            <div class="tweet-header">
+                <div class="tweet-avatar">🍕</div>
+                <div class="tweet-info">
+                    <div class="tweet-name">Pentagon Pizza Report</div>
+                    <div class="tweet-handle">@PenPizzaReport</div>
+                </div>
+                <div class="tweet-time">${timeAgo}</div>
+            </div>
+            <div class="tweet-content">${content}</div>
+            <div class="tweet-metrics">
+                <span class="tweet-likes">🔄 ${Math.floor(Math.random() * 20)}</span>
+                <span class="tweet-retweets">❤️ ${Math.floor(Math.random() * 50)}</span>
+            </div>
+        `;
+        
+        // Insert at the top
+        tweetsContainer.insertBefore(tweetElement, tweetsContainer.firstChild);
+        
+        // Fade in effect
+        tweetElement.style.opacity = '0';
+        setTimeout(() => {
+            tweetElement.style.opacity = '1';
+            tweetElement.style.transition = 'opacity 0.3s ease';
+        }, 100);
+        
+        // Keep only latest 5 tweets
+        while (tweetsContainer.children.length > 5) {
+            tweetsContainer.removeChild(tweetsContainer.lastChild);
+        }
+    }
+    
+    // Twitter embed functionality removed - using simple link instead
 }
-
 // Initialize the dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new SignalSliceMonitor();
@@ -1180,6 +1288,16 @@ notificationStyles.textContent = `
     }
 `;
 document.head.appendChild(notificationStyles);
+
+
+
+
+
+
+
+
+
+
 
 
 

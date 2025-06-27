@@ -10,6 +10,8 @@ ENV/
 env.bak/
 venv.bak/
 
+.env
+
 # Data files (optional - you might want to include baseline.json)
 data/current_hour_*.csv
 
