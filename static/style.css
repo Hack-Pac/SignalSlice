@@ -22,6 +22,23 @@
     --glow-yellow: rgba(251, 191, 36, 0.3);
 }
 
+[data-theme="light"] {
+    --bg-dark: #f3f4f6;
+    --bg-darker: #e5e7eb;
+    --bg-panel: #ffffff;
+    --bg-card: #f9fafb;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-muted: #6b7280;
+    
+    --border-primary: #e5e7eb;
+    --border-accent: #d1d5db;
+    
+    --glow-blue: rgba(59, 130, 246, 0.1);
+    --glow-red: rgba(239, 68, 68, 0.1);
+    --glow-yellow: rgba(251, 191, 36, 0.1);
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
 }
@@ -129,6 +146,37 @@ body {
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
+}
+
+.theme-toggle {
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.theme-toggle:hover {
+    background: var(--bg-panel);
+    border-color: var(--border-accent);
+    transform: scale(1.05);
+}
+
+.theme-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+
+.theme-toggle:hover .theme-icon {
+    transform: rotate(180deg);
 }
 
 .live-indicator {
@@ -1097,6 +1145,34 @@ a:focus-visible {
 @keyframes flash {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+}
+
+/* Light theme specific adjustments */
+[data-theme="light"] .surveillance-grid {
+    background-image: 
+        linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+}
+
+[data-theme="light"] .stat-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .activity-critical {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="light"] .chart-container {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .pulse-dot {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+}
+
+[data-theme="light"] .classification {
+    background: var(--danger-red);
+    color: white;
 }
 
 .notification.critical {
