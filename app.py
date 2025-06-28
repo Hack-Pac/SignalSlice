@@ -559,7 +559,7 @@ if __name__ == '__main__':
     # Start the scanner automatically
     start_scanner()
     try:
-        socketio.run(app, debug=False, host='0.0.0.0', port=5000)
+        socketio.run(app, debug=False, host='0.0.0.0', port=6003)
     except KeyboardInterrupt:
         logger.info("\n🛑 Shutting down...")
         stop_scanner()

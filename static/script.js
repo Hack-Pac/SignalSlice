@@ -60,9 +60,6 @@ class SignalSliceMonitor {
         // Initialize dashboard
         this.addActivityItem('INIT', 'SignalSlice dashboard loading...', 'normal');
         
-        // Initialize theme
-        this.initializeTheme();
-        
         this.initializeChart();
         this.initializeMap();
         this.setupEventListeners();
@@ -95,63 +92,7 @@ class SignalSliceMonitor {
         if (overlay) {
             overlay.style.display = 'none';
         }
-    }
-    
-    initializeTheme() {
-        // Get saved theme from localStorage or default to dark
-        const savedTheme = localStorage.getItem('signalslice-theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        
-        // Update button icons
-        this.updateThemeIcons(savedTheme);
-    }
-    
-    updateThemeIcons(theme) {
-        const sunIcon = document.querySelector('.sun-icon');
-        const moonIcon = document.querySelector('.moon-icon');
-        
-        if (theme === 'light') {
-            sunIcon.style.display = 'none';
-            moonIcon.style.display = 'block';
-        } else {
-            sunIcon.style.display = 'block';
-            moonIcon.style.display = 'none';
-        }
-    }
-    
-    toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('signalslice-theme', newTheme);
-        
-        this.updateThemeIcons(newTheme);
-        
-        // Re-render chart with new theme colors
-        if (this.chart) {
-            this.updateChartTheme();
-        }
-        
-        // Add activity item
-        this.addActivityItem('SYSTEM', `Theme switched to ${newTheme} mode`, 'normal');
-    }
-    
-    updateChartTheme() {
-        // Update chart colors based on theme
-        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-        
-        if (this.chart) {
-            this.chart.options.plugins.legend.labels.color = isDark ? '#d1d5db' : '#374151';
-            this.chart.options.scales.x.ticks.color = isDark ? '#6b7280' : '#9ca3af';
-            this.chart.options.scales.x.grid.color = isDark ? '#374151' : '#e5e7eb';
-            this.chart.options.scales.y.ticks.color = isDark ? '#6b7280' : '#9ca3af';
-            this.chart.options.scales.y.grid.color = isDark ? '#374151' : '#e5e7eb';
-            this.chart.update();
-        }
-    }
-    
-    connectToBackend() {
+    }    connectToBackend() {
         // Wait for SocketIO to be fully loaded
         if (typeof io === 'undefined') {
             setTimeout(() => this.connectToBackend(), 1000);
@@ -1133,14 +1074,6 @@ class SignalSliceMonitor {
         }, 3000);
     }
       setupEventListeners() {
-        // Theme toggle button
-        const themeToggle = document.getElementById('theme-toggle');
-        if (themeToggle) {
-            const handler = () => this.toggleTheme();
-            themeToggle.addEventListener('click', handler);
-            this.domHandlers.set(themeToggle, handler);
-        }
-        
         // Chart period controls
         document.querySelectorAll('[data-period]').forEach(button => {
             const handler = (e) => {
@@ -1471,67 +1404,3 @@ notificationStyles.textContent = `
     }
 `;
 document.head.appendChild(notificationStyles);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

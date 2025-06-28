@@ -12,7 +12,8 @@
       "Bash(sed:*)",
       "Bash(python test:*)",
       "Bash(pkill:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }
