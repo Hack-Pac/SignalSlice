@@ -269,7 +269,6 @@ MIT License - see LICENSE file for details
 ---
 
 ## 🙏 Acknowledgments
-
 - Inspired by the legendary Pentagon Pizza Index OSINT technique
 - Built with Flask, SocketIO, Playwright, and modern web technologies
 - Thanks to the open-source community for the amazing tools and libraries
@@ -299,6 +298,9 @@ MIT License - see LICENSE file for details
 ---
 
 *Stay vigilant! 🍕🛰️*
+
+
+
 
 
 

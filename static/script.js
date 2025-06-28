@@ -31,12 +31,32 @@ class SignalSliceMonitor {
         // MEMORY: Use WeakMap for temporary data caching
         this.tempDataCache = new WeakMap();
         
+        // Debouncing utilities
+        this.debouncedUpdates = new Map();
+        this.updateDebounceDelay = 250; // 250ms debounce for UI updates
+        
+        // Store event handlers for cleanup
+        this.socketHandlers = new Map();
+        this.domHandlers = new Map();
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => this.cleanup());
+        
+        // Performance: Pause animations when tab is not visible
+        document.addEventListener('visibilitychange', () => {
+            const animatedElements = document.querySelectorAll('.pulse-dot, .radar-line, .stat-card');
+            if (document.hidden) {
+                animatedElements.forEach(el => el.classList.add('pause-animation-offscreen'));
+            } else {
+                animatedElements.forEach(el => el.classList.remove('pause-animation-offscreen'));
+            }
+        });
+        
         this.init();
     }    init() {
         // Hide loading overlay immediately and show main content
         this.hideLoadingOverlay();
         this.updateSystemTime();
-        
         // Add initial test activity to verify feed is working
         console.log('Testing activity feed...');
         this.addActivityItem('INIT', 'SignalSlice dashboard loading...', 'normal');
@@ -92,21 +112,32 @@ class SignalSliceMonitor {
                 forceNew: true
             });
             
-            // Handle connection events
-            this.socket.on('connect', () => {
+            // Handle connection events with stored references for cleanup
+            const connectHandler = () => {
                 console.log('✅ Successfully connected to SignalSlice backend');
                 console.log('Socket ID:', this.socket.id);
                 this.addActivityItem('CONNECT', 'Connected to real-time data stream', 'success');
-            });
+            };
             
-            this.socket.on('connect_error', (error) => {
+            const connectErrorHandler = (error) => {
                 console.error('❌ SocketIO connection error:', error);
                 this.addActivityItem('ERROR', `Connection failed: ${error.message || error}`, 'critical');
-            });
-              this.socket.on('disconnect', () => {
+            };
+            
+            const disconnectHandler = () => {
                 console.log('❌ Disconnected from backend');
                 this.addActivityItem('DISCONNECT', 'Connection to data stream lost', 'critical');
-            });
+            };
+            
+            // Store handlers for cleanup
+            this.socketHandlers.set('connect', connectHandler);
+            this.socketHandlers.set('connect_error', connectErrorHandler);
+            this.socketHandlers.set('disconnect', disconnectHandler);
+            
+            // Attach handlers
+            this.socket.on('connect', connectHandler);
+            this.socket.on('connect_error', connectErrorHandler);
+            this.socket.on('disconnect', disconnectHandler);
             
             // Add timeout to detect if connection never happens
             setTimeout(() => {
@@ -116,38 +147,25 @@ class SignalSliceMonitor {
                 }
             }, 5000);
             
-            // Handle real-time updates from backend
-            this.socket.on('initial_state', (data) => {
-                this.handleInitialState(data);
-            });
+            // Handle real-time updates from backend with stored references
+            const handlers = {
+                'initial_state': (data) => this.handleInitialState(data),
+                'activity_update': (activity) => this.handleActivityUpdate(activity),
+                'pizza_index_update': (data) => this.handlePizzaIndexUpdate(data),
+                'gay_bar_index_update': (data) => this.handleGayBarIndexUpdate(data),
+                'scan_stats_update': (stats) => this.handleScanStatsUpdate(stats),
+                'anomaly_detected': (anomaly) => this.handleAnomalyDetected(anomaly),
+                'scanning_start': () => this.showScanningAnimation(),
+                'scanning_complete': () => {
+                    this.hideScanningAnimation();
+                    this.updateLastScanTime();
+                }
+            };
             
-            this.socket.on('activity_update', (activity) => {
-                this.handleActivityUpdate(activity);
-            });
-            
-                    this.socket.on('pizza_index_update', (data) => {
-            this.handlePizzaIndexUpdate(data);
-        });
-        
-        this.socket.on('gay_bar_index_update', (data) => {
-            this.handleGayBarIndexUpdate(data);
-        });
-            
-            this.socket.on('scan_stats_update', (stats) => {
-                this.handleScanStatsUpdate(stats);
-            });
-            
-            this.socket.on('anomaly_detected', (anomaly) => {
-                this.handleAnomalyDetected(anomaly);
-            });
-            
-            this.socket.on('scanning_start', () => {
-                this.showScanningAnimation();
-            });
-            
-            this.socket.on('scanning_complete', () => {
-                this.hideScanningAnimation();
-                this.updateLastScanTime();
+            // Store and attach all handlers
+            Object.entries(handlers).forEach(([event, handler]) => {
+                this.socketHandlers.set(event, handler);
+                this.socket.on(event, handler);
             });
               } catch (error) {
             console.error('Failed to connect to backend:', error);
@@ -161,7 +179,10 @@ class SignalSliceMonitor {
         this.addActivityItem('FALLBACK', 'Using HTTP polling for updates', 'warning');
         
         // MEMORY OPTIMIZATION: Poll every 15 seconds to reduce memory pressure
-        setInterval(() => {
+        if (this.httpPollingInterval) {
+            clearInterval(this.httpPollingInterval);
+        }
+        this.httpPollingInterval = setInterval(() => {
             this.fetchActivityUpdates();
         }, 15000);
         
@@ -203,7 +224,10 @@ class SignalSliceMonitor {
         // MEMORY OPTIMIZATION: Clear existing feed and rebuild with limited data
         const activityList = document.getElementById('activity-feed');
         if (activityList) {
-            activityList.innerHTML = '';
+            // Safe DOM clearing
+            while (activityList.firstChild) {
+                activityList.removeChild(activityList.firstChild);
+            }
             
             // Only take the latest activities up to our limit
             const limitedActivities = activities.slice(0, this.maxActivityItems);
@@ -235,7 +259,6 @@ class SignalSliceMonitor {
         this.updatePizzaIndex(this.pizzaIndex);
         this.updateGayBarIndex(this.gayBarIndex);
         this.updateActiveLocations(this.activeLocations);
-        
         const scanCountElement = document.getElementById('scan-count');
         const anomalyCountElement = document.getElementById('anomaly-count');
         
@@ -267,7 +290,6 @@ class SignalSliceMonitor {
             this.lastScanTime = new Date();
             this.updateLastScanTime();
         }
-        
         this.updateLastUpdateIndicator();
         
         // MEMORY OPTIMIZATION: Start periodic cleanup
@@ -278,7 +300,10 @@ class SignalSliceMonitor {
     
     // MEMORY OPTIMIZATION: Periodic memory cleanup
     startMemoryCleanup() {
-        setInterval(() => {
+        if (this.memoryCleanupInterval) {
+            clearInterval(this.memoryCleanupInterval);
+        }
+        this.memoryCleanupInterval = setInterval(() => {
             this.performMemoryCleanup();
         }, 30000); // Clean up every 30 seconds
     }
@@ -368,7 +393,6 @@ class SignalSliceMonitor {
         
         // Add detailed activity item for anomaly
         this.addActivityItem('ANOMALY', `${anomaly.title}: ${anomaly.message}`, 'critical');
-        
         // Note: Pizza reports now use real Twitter embed
         
         // Update pizza index with anomaly flag if value increase is significant
@@ -396,7 +420,10 @@ class SignalSliceMonitor {
             timeElement.textContent = `EST ${timeString}`;
         }
         // MEMORY OPTIMIZATION: Update every 10 seconds to reduce operations
-        setTimeout(() => this.updateSystemTime(), 10000);
+        if (this.systemTimeInterval) {
+            clearInterval(this.systemTimeInterval);
+        }
+        this.systemTimeInterval = setInterval(() => this.updateSystemTime(), 10000);
     }
     
     triggerManualScan() {
@@ -506,16 +533,36 @@ class SignalSliceMonitor {
             borderStyle = 'border-left: 4px solid #f59e0b;';
         }
         
-        activityElement.innerHTML = `
-            <div class="activity-icon" style="color: ${iconColor};">${icon}</div>
-            <div class="activity-content">
-                <div class="activity-message">${activity.message}</div>
-                <div class="activity-meta">
-                    <span class="activity-type">${activity.type}</span>
-                    <span class="activity-time">${activity.timestamp}</span>
-                </div>
-            </div>
-        `;
+        // Safe DOM manipulation instead of innerHTML to prevent XSS
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'activity-icon';
+        iconDiv.style.color = iconColor;
+        iconDiv.textContent = icon;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'activity-message';
+        messageDiv.textContent = activity.message;
+        
+        const typeSpan = document.createElement('span');
+        typeSpan.className = 'activity-type';
+        typeSpan.textContent = activity.type;
+        
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'activity-time';
+        timeSpan.textContent = activity.timestamp;
+        
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'activity-meta';
+        metaDiv.appendChild(typeSpan);
+        metaDiv.appendChild(timeSpan);
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'activity-content';
+        contentDiv.appendChild(messageDiv);
+        contentDiv.appendChild(metaDiv);
+        
+        activityElement.appendChild(iconDiv);
+        activityElement.appendChild(contentDiv);
           if (borderStyle) {
             activityElement.style.cssText += borderStyle;
         }
@@ -554,7 +601,6 @@ class SignalSliceMonitor {
     
     updateLastScanTime() {
         if (!this.lastScanTime) return;
-        
         const now = new Date();
         const diffInMinutes = Math.floor((now - this.lastScanTime) / 60000);
         
@@ -613,80 +659,85 @@ class SignalSliceMonitor {
         this.updateThreatLevel(Math.min(90, data.pizzaIndex * 10));
     }
       updatePizzaIndex(value, changePercent = null, isAnomaly = false) {
-        console.log(`🍕 updatePizzaIndex called with value: ${value}, change: ${changePercent}`);
-        const element = document.getElementById('pizza-index');
-        const changeElement = document.getElementById('pizza-change');
-        const cardElement = document.getElementById('pizza-index-card');
-        
-        if (!element) {
-            console.error('❌ pizza-index element not found in DOM');
-            return;
-        } else {
-            console.log('✅ Found pizza-index element');
-        }
-        
-        const currentValue = parseFloat(element.textContent) || 0;
-        const change = value - currentValue;
-        const calculatedChangePercent = changePercent !== null ? changePercent : 
-            (currentValue > 0 ? ((change / currentValue) * 100) : 0);
-        
-        this.animateNumber(element, currentValue, value, 1000);
-        
-        if (changeElement) {
-            changeElement.textContent = `${calculatedChangePercent >= 0 ? '+' : ''}${calculatedChangePercent.toFixed(2)}%`;
-            changeElement.className = 'stat-change ' + (calculatedChangePercent >= 0 ? 'positive' : 'negative');
+        // Debounce pizza index updates
+        this.debounceUpdate('pizzaIndex', () => {
+            console.log(`🍕 updatePizzaIndex called with value: ${value}, change: ${changePercent}`);
+            const element = document.getElementById('pizza-index');
+            const changeElement = document.getElementById('pizza-change');
+            const cardElement = document.getElementById('pizza-index-card');
             
-            // Special styling for anomalies
-            if (isAnomaly) {
-                changeElement.style.color = '#ef4444';
-                changeElement.style.fontWeight = 'bold';
-                setTimeout(() => {
-                    changeElement.style.color = '';
-                    changeElement.style.fontWeight = '';
-                }, 5000);
+            if (!element) {
+                console.error('❌ pizza-index element not found in DOM');
+                return;
+            } else {
+                console.log('✅ Found pizza-index element');
             }
-        }
-        
-        if (cardElement) {
-            cardElement.className = 'stat-card';
-            if (isAnomaly) {
-                cardElement.classList.add('anomaly-detected');
-                setTimeout(() => {
-                    cardElement.classList.remove('anomaly-detected');
-                }, 5000);
-            } else if (value > 7) {
-                cardElement.classList.add('critical');
-            } else if (value > 5) {
-                cardElement.classList.add('warning');
+            
+            const currentValue = parseFloat(element.textContent) || 0;
+            const change = value - currentValue;
+            const calculatedChangePercent = changePercent !== null ? changePercent : 
+                (currentValue > 0 ? ((change / currentValue) * 100) : 0);
+            
+            this.animateNumber(element, currentValue, value, 1000);
+            
+            if (changeElement) {
+                changeElement.textContent = `${calculatedChangePercent >= 0 ? '+' : ''}${calculatedChangePercent.toFixed(2)}%`;
+                changeElement.className = 'stat-change ' + (calculatedChangePercent >= 0 ? 'positive' : 'negative');
+                
+                // Special styling for anomalies
+                if (isAnomaly) {
+                    changeElement.style.color = '#ef4444';
+                    changeElement.style.fontWeight = 'bold';
+                    setTimeout(() => {
+                        changeElement.style.color = '';
+                        changeElement.style.fontWeight = '';
+                    }, 5000);
+                }
             }
-        }
-        
-        // Update chart with anomaly information
-        this.updateChartData(value, isAnomaly, calculatedChangePercent);
-        
-        // Note: Pizza reports now use real Twitter embed
-        
-        // Update stored pizza index
-        this.pizzaIndex = value;
+            
+            if (cardElement) {
+                cardElement.className = 'stat-card';
+                if (isAnomaly) {
+                    cardElement.classList.add('anomaly-detected');
+                    setTimeout(() => {
+                        cardElement.classList.remove('anomaly-detected');
+                    }, 5000);
+                } else if (value > 7) {
+                    cardElement.classList.add('critical');
+                } else if (value > 5) {
+                    cardElement.classList.add('warning');
+                }
+            }
+            
+            // Update chart with anomaly information
+            this.updateChartData(value, isAnomaly, calculatedChangePercent);
+            
+            // Note: Pizza reports now use real Twitter embed
+            
+            // Update stored pizza index
+            this.pizzaIndex = value;
+        });
     }
     
     updateGayBarIndex(value, changePercent = null, isAnomaly = false) {
-        console.log(`🏳️‍🌈 updateGayBarIndex called with value: ${value}, change: ${changePercent}`);
-        const element = document.getElementById('gay-bar-index');
-        const changeElement = document.getElementById('gay-bar-change');
-        const cardElement = document.getElementById('gay-bar-index-card');
-        
-        if (!element) {
-            console.error('❌ gay-bar-index element not found in DOM');
-            return;
-        } else {
-            console.log('✅ Found gay-bar-index element');
-        }
-        
-        const currentValue = parseFloat(element.textContent) || 0;
-        const change = value - currentValue;
-        const calculatedChangePercent = changePercent !== null ? changePercent : 
-            (currentValue > 0 ? ((change / currentValue) * 100) : 0);
+        // Debounce gay bar index updates
+        this.debounceUpdate('gayBarIndex', () => {
+            console.log(`🏳️‍🌈 updateGayBarIndex called with value: ${value}, change: ${changePercent}`);
+            const element = document.getElementById('gay-bar-index');
+            const changeElement = document.getElementById('gay-bar-change');
+            const cardElement = document.getElementById('gay-bar-index-card');
+            
+            if (!element) {
+                console.error('❌ gay-bar-index element not found in DOM');
+                return;
+            } else {
+                console.log('✅ Found gay-bar-index element');
+            }
+            
+            const currentValue = parseFloat(element.textContent) || 0;
+            const change = value - currentValue;
+            const calculatedChangePercent = changePercent !== null ? changePercent : 
+                (currentValue > 0 ? ((change / currentValue) * 100) : 0);
         this.animateNumber(element, currentValue, value, 1000);
         
         if (changeElement) {
@@ -722,6 +773,7 @@ class SignalSliceMonitor {
         
         // Update stored gay bar index
         this.gayBarIndex = value;
+        });
     }
     
     updateActiveLocations(count) {
@@ -758,11 +810,15 @@ class SignalSliceMonitor {
         
         requestAnimationFrame(animate);
         
-        // PERFORMANCE: Reduced visual feedback - no transform scale
-        element.style.color = '#fbbf24';
-        setTimeout(() => {
-            element.style.color = '';
-        }, 200); // Reduced duration
+        // PERFORMANCE: Minimal visual feedback
+        requestAnimationFrame(() => {
+            element.style.color = '#fbbf24';
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    element.style.color = '';
+                }, 150); // Further reduced duration
+            });
+        });
     }      initializeChart() {
         const ctx = document.getElementById('realtime-chart');
         if (!ctx) {
@@ -841,7 +897,6 @@ class SignalSliceMonitor {
             minute: '2-digit' 
         });
     }
-    
     updateChartData(newValue, isAnomaly = false, changePercent = 0) {
         if (!this.chart) return;
         
@@ -852,7 +907,6 @@ class SignalSliceMonitor {
         this.chartData.timestamps.push(now);
         this.chartData.values.push(newValue);
         this.chartData.anomalies.push(isAnomaly);
-        
         // Update chart data
         this.chart.data.labels.push(timeLabel);
         this.chart.data.datasets[0].data.push(newValue);
@@ -904,7 +958,6 @@ class SignalSliceMonitor {
         
         return labels;
     }
-    
     generateChartData(count) {
         const data = [];
         const baseValue = 3.42; // Start near current index
@@ -990,7 +1043,6 @@ class SignalSliceMonitor {
     }
     
     // MEMORY OPTIMIZATION: Removed duplicate addActivityItem method - using the optimized version above
-    
     updateThreatLevel(percentage) {
         const fill = document.getElementById('threat-fill');
         const text = document.getElementById('threat-level-text');
@@ -1044,14 +1096,12 @@ class SignalSliceMonitor {
             });
             
             banner.style.display = 'block';
-            
             // Auto-hide after 10 seconds
             setTimeout(() => {
                 banner.style.display = 'none';
             }, 10000);
         }
     }
-    
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
@@ -1080,31 +1130,38 @@ class SignalSliceMonitor {
       setupEventListeners() {
         // Chart period controls
         document.querySelectorAll('[data-period]').forEach(button => {
-            button.addEventListener('click', (e) => {
+            const handler = (e) => {
                 document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 
                 const period = e.target.dataset.period;
                 this.updateChartPeriod(period);
-            });
+            };
+            button.addEventListener('click', handler);
+            // Store handler for cleanup
+            this.domHandlers.set(button, handler);
         });
         
         // Map controls
         const centerBtn = document.getElementById('center-pentagon');
         if (centerBtn) {
-            centerBtn.addEventListener('click', () => {
+            const handler = () => {
                 if (this.map) {
                     this.map.setView([38.8719, -77.0563], 10);
                     this.showNotification('Map centered on Pentagon', 'info');
                 }
-            });
+            };
+            centerBtn.addEventListener('click', handler);
+            this.domHandlers.set(centerBtn, handler);
         }
         
         const heatmapBtn = document.getElementById('toggle-heatmap');
         if (heatmapBtn) {
-            heatmapBtn.addEventListener('click', () => {
+            const handler = () => {
                 this.showNotification('Heatmap view toggled', 'info');
-            });
+            };
+            heatmapBtn.addEventListener('click', handler);
+            this.domHandlers.set(heatmapBtn, handler);
         }
         
           // Add manual scan button to map controls
@@ -1117,7 +1174,6 @@ class SignalSliceMonitor {
             mapControls.appendChild(scanBtn);
         }
     }
-    
     updateChartPeriod(period) {
         if (!this.chart) return;
         let labelCount, dataCount;
@@ -1223,21 +1279,57 @@ class SignalSliceMonitor {
         
         const tweetElement = document.createElement('div');
         tweetElement.className = 'tweet-card';
-        tweetElement.innerHTML = `
-            <div class="tweet-header">
-                <div class="tweet-avatar">🍕</div>
-                <div class="tweet-info">
-                    <div class="tweet-name">Pentagon Pizza Report</div>
-                    <div class="tweet-handle">@PenPizzaReport</div>
-                </div>
-                <div class="tweet-time">${timeAgo}</div>
-            </div>
-            <div class="tweet-content">${content}</div>
-            <div class="tweet-metrics">
-                <span class="tweet-likes">🔄 ${Math.floor(Math.random() * 20)}</span>
-                <span class="tweet-retweets">❤️ ${Math.floor(Math.random() * 50)}</span>
-            </div>
-        `;
+        // Safe DOM construction for tweet element
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'tweet-header';
+        
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'tweet-avatar';
+        avatarDiv.textContent = '🍕';
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'tweet-info';
+        
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'tweet-name';
+        nameDiv.textContent = 'Pentagon Pizza Report';
+        
+        const handleDiv = document.createElement('div');
+        handleDiv.className = 'tweet-handle';
+        handleDiv.textContent = '@PenPizzaReport';
+        
+        infoDiv.appendChild(nameDiv);
+        infoDiv.appendChild(handleDiv);
+        
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'tweet-time';
+        timeDiv.textContent = timeAgo;
+        
+        headerDiv.appendChild(avatarDiv);
+        headerDiv.appendChild(infoDiv);
+        headerDiv.appendChild(timeDiv);
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'tweet-content';
+        contentDiv.textContent = content;
+        
+        const metricsDiv = document.createElement('div');
+        metricsDiv.className = 'tweet-metrics';
+        
+        const likesSpan = document.createElement('span');
+        likesSpan.className = 'tweet-likes';
+        likesSpan.textContent = `🔄 ${Math.floor(Math.random() * 20)}`;
+        
+        const retweetsSpan = document.createElement('span');
+        retweetsSpan.className = 'tweet-retweets';
+        retweetsSpan.textContent = `❤️ ${Math.floor(Math.random() * 50)}`;
+        
+        metricsDiv.appendChild(likesSpan);
+        metricsDiv.appendChild(retweetsSpan);
+        
+        tweetElement.appendChild(headerDiv);
+        tweetElement.appendChild(contentDiv);
+        tweetElement.appendChild(metricsDiv);
         
         // Insert at the top
         tweetsContainer.insertBefore(tweetElement, tweetsContainer.firstChild);
@@ -1256,10 +1348,91 @@ class SignalSliceMonitor {
     }
     
     // Twitter embed functionality removed - using simple link instead
+    
+    // Debouncing utility method
+    debounceUpdate(key, callback) {
+        // Clear existing timeout
+        if (this.debouncedUpdates.has(key)) {
+            clearTimeout(this.debouncedUpdates.get(key));
+        }
+        
+        // Set new timeout
+        const timeoutId = setTimeout(() => {
+            callback();
+            this.debouncedUpdates.delete(key);
+        }, this.updateDebounceDelay);
+        
+        this.debouncedUpdates.set(key, timeoutId);
+    }
+    
+    // Cleanup method for proper resource disposal
+    cleanup() {
+        console.log('Cleaning up SignalSlice resources...');
+        
+        // Clear all debounce timeouts
+        this.debouncedUpdates.forEach(timeoutId => clearTimeout(timeoutId));
+        this.debouncedUpdates.clear();
+        
+        // Remove socket event listeners
+        if (this.socket) {
+            this.socketHandlers.forEach((handler, event) => {
+                this.socket.off(event, handler);
+            });
+            this.socketHandlers.clear();
+            
+            // Disconnect socket
+            if (this.socket.connected) {
+                this.socket.disconnect();
+            }
+        }
+        
+        // Remove DOM event listeners
+        this.domHandlers.forEach((handler, element) => {
+            if (element && typeof element.removeEventListener === 'function') {
+                element.removeEventListener('click', handler);
+            }
+        });
+        this.domHandlers.clear();
+        
+        // Clear intervals
+        if (this.systemTimeInterval) {
+            clearInterval(this.systemTimeInterval);
+        }
+        
+        if (this.memoryCleanupInterval) {
+            clearInterval(this.memoryCleanupInterval);
+        }
+        
+        if (this.httpPollingInterval) {
+            clearInterval(this.httpPollingInterval);
+        }
+        
+        // Destroy chart
+        if (this.chart) {
+            this.chart.destroy();
+        }
+        
+        // Clear map
+        if (this.map) {
+            this.map.remove();
+        }
+        
+        console.log('Cleanup complete.');
+    }
 }
+
 // Initialize the dashboard when DOM is loaded
+let dashboardInstance = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-    new SignalSliceMonitor();
+    dashboardInstance = new SignalSliceMonitor();
+});
+
+// Cleanup on page unload
+window.addEventListener('unload', () => {
+    if (dashboardInstance) {
+        dashboardInstance.cleanup();
+    }
 });
 
 // Global CSS animations for notifications
@@ -1288,6 +1461,33 @@ notificationStyles.textContent = `
     }
 `;
 document.head.appendChild(notificationStyles);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

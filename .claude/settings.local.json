@@ -4,7 +4,13 @@
       "Bash(ls:*)",
       "Bash(rm:*)",
       "Bash(python3:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "mcp__zen__analyze",
+      "mcp__zen__analyze",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(sed:*)",
+      "Bash(python test:*)"
     ],
     "deny": []
   }

@@ -37,7 +37,6 @@ def setup_logging():
     return logger
 # Initialize logger with UTF-8 support
 logger = setup_logging()
-
 # EST timezone
 EST = pytz.timezone('US/Eastern')
 
@@ -113,6 +112,21 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

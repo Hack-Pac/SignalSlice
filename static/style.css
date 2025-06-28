@@ -10,10 +10,9 @@
     --bg-darker: #060912;
     --bg-panel: #111827;
     --bg-card: #1f2937;
-    
     --text-primary: #f9fafb;
     --text-secondary: #d1d5db;
-    --text-muted: #6b7280;
+    --text-muted: #9ca3af; /* Improved contrast ratio */
     
     --border-primary: #374151;
     --border-accent: #4b5563;
@@ -26,6 +25,18 @@
 /* Performance optimization: reduce * selector scope */
 *, *::before, *::after {
     box-sizing: border-box;
+}
+
+/* Global performance optimizations */
+html {
+    /* Enable GPU acceleration where beneficial */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimize reflows by containing layout changes */
+.panel, .card, .container {
+    contain: layout style;
 }
 
 body {
@@ -111,7 +122,6 @@ body {
     -webkit-text-fill-color: transparent;
     /* Removed text-shadow for performance */
 }
-
 .tagline {
     font-size: 0.7rem;
     color: var(--text-muted);
@@ -157,7 +167,6 @@ body {
     border-radius: 50%;
     animation: simplePulse 3s ease-in-out infinite; /* Slower, less frequent */
 }
-
 .pulse-dot.small {
     width: 6px;
     height: 6px;
@@ -241,6 +250,12 @@ body {
 .stat-card:hover {
     transform: translateY(-2px); /* Reduced transform */
     border-color: var(--primary-blue);
+}
+
+/* Focus state for interactive stat cards */
+.stat-card:focus-within {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 2px;
 }
 
 /* PERFORMANCE: Simplified anomaly animation */
@@ -413,6 +428,12 @@ body {
     background: var(--bg-darker);
 }
 
+/* Focus state for activity items if they become interactive */
+.activity-item:focus {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: -2px;
+}
+
 .activity-item.activity-critical {
     border-left: 4px solid var(--primary-red);
     background: rgba(239, 68, 68, 0.1);
@@ -443,7 +464,6 @@ body {
     font-size: 0.7rem;
     color: var(--text-muted);
 }
-
 .activity-type {
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -544,6 +564,23 @@ body {
     background: rgba(59, 130, 246, 0.05);
 }
 
+/* Skip to main content link for accessibility */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary-blue);
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 0 0 8px 0;
+    z-index: 9999;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
 .status-dot {
     width: 8px;
     height: 8px;
@@ -554,7 +591,6 @@ body {
 .status-item.online .status-dot { background: var(--success-green); }
 .status-item.warning .status-dot { background: var(--warning-orange); }
 .status-item.offline .status-dot { background: var(--danger-red); }
-
 .status-value {
     font-size: 0.8rem;
     color: var(--text-muted);
@@ -646,6 +682,11 @@ body {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+.twitter-follow-button:focus {
+    outline: 3px solid var(--primary-yellow);
+    outline-offset: 3px;
+}
+
 .twitter-follow-button svg {
     width: 24px;
     height: 24px;
@@ -680,7 +721,6 @@ body {
     font-weight: 600;
     font-family: 'Courier New', monospace;
 }
-
 .recent-updates {
     margin-top: 30px;
     padding-top: 20px;
@@ -698,7 +738,6 @@ body {
 .update-item:last-child {
     border-bottom: none;
 }
-
 .update-time {
     font-size: 0.8rem;
     color: var(--text-muted);
@@ -873,11 +912,10 @@ body {
     color: var(--text-primary);
     font-size: 0.9rem;
 }
-
 #email-input:focus {
-    outline: none;
     border-color: var(--primary-blue);
-    /* Removed box-shadow */
+    outline: none; /* Simplified outline for performance */
+    transition: border-color 0.15s ease;
 }
 
 .btn-submit {
@@ -922,6 +960,26 @@ body {
 .btn:hover {
     background: var(--bg-darker);
     border-color: var(--primary-blue);
+}
+
+/* Focus indicators for keyboard navigation */
+.btn:focus,
+button:focus,
+a:focus,
+input:focus,
+textarea:focus,
+select:focus {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 2px;
+}
+
+/* Improve focus visibility on dark backgrounds */
+.btn:focus-visible,
+button:focus-visible,
+a:focus-visible {
+    outline: 3px solid var(--primary-yellow);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.2);
 }
 
 .btn.btn-sm {
@@ -969,6 +1027,8 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 9999;
+    contain: strict; /* Full containment for overlay */
+    will-change: opacity;
 }
 
 .scanning-animation {
@@ -1107,7 +1167,8 @@ body {
 
 /* Optimized loading states */
 .loading-content.scanning {
-    /* Removed complex scanning animations */
+    /* Removed complex scanning animations for performance */
+    animation: none !important;
 }
 
 /* PERFORMANCE: Media queries for reduced motion */
@@ -1120,6 +1181,46 @@ body {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* PERFORMANCE: Pause animations when tab is not visible */
+@media (prefers-reduced-motion: no-preference) {
+    .pause-animation-offscreen {
+        animation-play-state: paused !important;
+    }
+}
+
+/* Additional performance optimizations */
+.activity-feed::-webkit-scrollbar {
+    will-change: auto;
+}
+
+.chart-container canvas {
+    will-change: auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
