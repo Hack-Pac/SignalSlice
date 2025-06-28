@@ -32,9 +32,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(24).hex())
-# Fix CORS configuration to specify allowed origins
-socketio = SocketIO(app, cors_allowed_origins=['http://localhost:5000', 'http://127.0.0.1:5000', 'http://0.0.0.0:5000'])
+# Auto-generate secret key - no configuration needed
+app.config['SECRET_KEY'] = 'signalslice-' + os.urandom(24).hex()
+# Allow all origins for easy deployment (restrict in production if needed)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.after_request
 def add_security_headers(response):
@@ -43,54 +44,12 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' ws: wss:;"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:* http://0.0.0.0:*;"
     return response
 
-# API Key Authentication
-API_KEY = os.environ.get('SIGNALSLICE_API_KEY', 'default-api-key-change-in-production')
+# No API key authentication required
 
-# Simple rate limiting
-from collections import defaultdict
-from time import time
-
-rate_limit_storage = defaultdict(list)
-RATE_LIMIT_REQUESTS = 10  # Max requests per minute
-RATE_LIMIT_WINDOW = 60  # Window in seconds
-
-def is_rate_limited(ip_address):
-    """Check if IP address has exceeded rate limit"""
-    current_time = time()
-    # Clean old entries
-    rate_limit_storage[ip_address] = [
-        timestamp for timestamp in rate_limit_storage[ip_address]
-        if current_time - timestamp < RATE_LIMIT_WINDOW
-    ]
-    # Check if limit exceeded
-    if len(rate_limit_storage[ip_address]) >= RATE_LIMIT_REQUESTS:
-        return True
-    # Add current request
-    rate_limit_storage[ip_address].append(current_time)
-    return False
-
-def require_api_key(f):
-    """Decorator to require API key for sensitive endpoints"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Check rate limiting first
-        client_ip = request.remote_addr
-        if is_rate_limited(client_ip):
-            logger.warning(f"Rate limit exceeded for {client_ip} on {request.path}")
-            return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
-        
-        # Check API key
-        api_key = request.headers.get('X-API-Key') or request.args.get('api_key')
-        if not api_key or api_key != API_KEY:
-            logger.warning(f"Unauthorized API access attempt to {request.path} from {client_ip}")
-            return jsonify({'error': 'Invalid or missing API key'}), 401
-        
-        logger.info(f"Authorized API access to {request.path} from {client_ip}")
-        return f(*args, **kwargs)
-    return decorated_function
+# No authentication or rate limiting - simplified for easier deployment
 
 # Global state for dashboard
 dashboard_state = {
@@ -110,7 +69,6 @@ EST = pytz.timezone('US/Eastern')
 # Scanner scheduling variables
 scanner_loop = None
 scanner_task = None
-
 def add_activity_item(activity_type, message, level='normal'):
     """Add an item to the activity feed and emit to clients"""
     try:
@@ -145,7 +103,6 @@ def update_pizza_index(new_value, change_percent=0):
         # Validate index value
         validated_value = validate_index_value(new_value, 'pizza_index')
         validated_change = round(float(change_percent), 2)
-        
         old_value = dashboard_state['pizza_index']
         dashboard_state['pizza_index'] = validated_value
         
@@ -155,7 +112,7 @@ def update_pizza_index(new_value, change_percent=0):
             'old_value': old_value
         }
         
-        logger.debug(f"Emitting pizza_index_update: {data}")
+        # logger.debug(f"Emitting pizza_index_update: {data}")
         socketio.emit('pizza_index_update', data)
     except (ValidationError, ValueError) as e:
         logger.error(f"Pizza index update error: {e}")
@@ -177,7 +134,7 @@ def update_gay_bar_index(new_value, change_percent=0):
             'old_value': old_value
         }
         
-        logger.debug(f"Emitting gay_bar_index_update: {data}")
+        # logger.debug(f"Emitting gay_bar_index_update: {data}")
         socketio.emit('gay_bar_index_update', data)
     except (ValidationError, ValueError) as e:
         logger.error(f"Gay bar index update error: {e}")
@@ -216,12 +173,12 @@ async def run_scanner_cycle():
         # Run the actual scraping
         try:
             scraped_data = await scrape_current_hour()
-            logger.debug(f"Scraped {len(scraped_data)} data points")
+            # logger.debug(f"Scraped {len(scraped_data)} data points")
             
             # Validate scraped data
             try:
                 validated_data = validate_batch_data(scraped_data)
-                logger.debug(f"Validated {len(validated_data)} data points")
+                # logger.debug(f"Validated {len(validated_data)} data points")
                 scraped_data = validated_data
             except Exception as e:
                 logger.error(f"Data validation error: {e}")
@@ -230,14 +187,16 @@ async def run_scanner_cycle():
             add_activity_item('SCRAPE', '✅ Current hour data saved successfully', 'success')
             add_activity_item('SCRAPE', 'Data scraping completed', 'success')
             
-            # Debug: Print scraped data summary
+            # Separate data by venue type
             restaurant_data = [d for d in scraped_data if d.get('venue_type') == 'restaurant']
             gay_bar_data = [d for d in scraped_data if d.get('venue_type') == 'gay_bar']
-            logger.debug(f"Found {len(restaurant_data)} restaurant data points, {len(gay_bar_data)} gay bar data points")
+            # logger.debug(f"Found {len(restaurant_data)} restaurant data points, {len(gay_bar_data)} gay bar data points")
             
             # Calculate pizza index from restaurant data  
             if restaurant_data:
+                logger.info(f"Processing {len(restaurant_data)} restaurant data points")
                 restaurant_with_data = [d for d in restaurant_data if d.get('busyness_percent') is not None]
+                logger.info(f"Found {len(restaurant_with_data)} restaurants with busyness data")
                 if restaurant_with_data:
                     try:
                         # Ensure all busyness values are valid integers
@@ -253,14 +212,25 @@ async def run_scanner_cycle():
                             change_percent = ((new_pizza_index - dashboard_state['pizza_index']) / dashboard_state['pizza_index']) * 100 if dashboard_state['pizza_index'] > 0 else 0
                             update_pizza_index(new_pizza_index, change_percent)
                             add_activity_item('PIZZA', f'🍕 Pizza Index updated: {new_pizza_index:.2f} ({avg_restaurant_busy:.0f}% busy)', 'normal')
-                            logger.debug(f"Pizza index updated to {new_pizza_index:.2f}")
+                            # logger.debug(f"Pizza index updated to {new_pizza_index:.2f}")
+                        else:
+                            logger.warning("No valid busyness values found for restaurants")
+                            add_activity_item('WARNING', '⚠️ No valid restaurant busyness data', 'warning')
                     except Exception as e:
                         logger.error(f"Error calculating pizza index: {e}")
                         add_activity_item('ERROR', 'Failed to calculate pizza index', 'warning')
+                else:
+                    logger.info("No restaurants with busyness data found")
+                    add_activity_item('INFO', '📊 No restaurant busyness data available', 'normal')
+            else:
+                logger.warning("No restaurant data in scraped results")
+                add_activity_item('WARNING', '⚠️ No restaurant data found', 'warning')
             
             # Calculate gay bar index from scraped data
             if gay_bar_data:
+                logger.info(f"Processing {len(gay_bar_data)} gay bar data points")
                 gay_bar_with_data = [d for d in gay_bar_data if d.get('busyness_percent') is not None]
+                logger.info(f"Found {len(gay_bar_with_data)} gay bars with busyness data")
                 if gay_bar_with_data:
                     try:
                         # Ensure all busyness values are valid integers
@@ -276,11 +246,18 @@ async def run_scanner_cycle():
                             change_percent = ((new_gay_bar_index - dashboard_state['gay_bar_index']) / dashboard_state['gay_bar_index']) * 100 if dashboard_state['gay_bar_index'] > 0 else 0
                             update_gay_bar_index(new_gay_bar_index, change_percent)
                             add_activity_item('GAYBAR', f'🏳️‍🌈 Gay Bar Index updated: {new_gay_bar_index:.2f} ({avg_gay_bar_busy:.0f}% busy)', 'normal')
-                            logger.debug(f"Gay bar index updated to {new_gay_bar_index:.2f}")
+                            # logger.debug(f"Gay bar index updated to {new_gay_bar_index:.2f}")
+                        else:
+                            logger.warning("No valid busyness values found for gay bars")
+                            add_activity_item('WARNING', '⚠️ No valid gay bar busyness data', 'warning')
                     except Exception as e:
                         logger.error(f"Error calculating gay bar index: {e}")
                         add_activity_item('ERROR', 'Failed to calculate gay bar index', 'warning')
+                else:
+                    logger.info("No gay bars with busyness data found")
+                    add_activity_item('INFO', '📊 No gay bar busyness data available', 'normal')
             else:
+                logger.warning("No gay bar data in scraped results")
                 add_activity_item('GAYBAR', '⚠️ No gay bar data available this scan', 'warning')
                 
         except Exception as e:
@@ -332,6 +309,23 @@ async def run_scanner_cycle():
             update_pizza_index(new_index, change_percent)
         
         dashboard_state['scanning'] = False
+        
+        # Always emit current state after scan completes
+        logger.info(f"Scan complete. Current indices - Pizza: {dashboard_state['pizza_index']:.2f}, Gay Bar: {dashboard_state['gay_bar_index']:.2f}")
+        
+        # Emit the current indices to all clients
+        socketio.emit('pizza_index_update', {
+            'value': dashboard_state['pizza_index'],
+            'change': 0,
+            'old_value': dashboard_state['pizza_index']
+        })
+        
+        socketio.emit('gay_bar_index_update', {
+            'value': dashboard_state['gay_bar_index'],
+            'change': 0,
+            'old_value': dashboard_state['gay_bar_index']
+        })
+        
         socketio.emit('scanning_complete')
         
         completion_time = datetime.now(EST)
@@ -340,7 +334,6 @@ async def run_scanner_cycle():
         next_scan_seconds = get_next_hour_start()
         next_scan_time = datetime.now(EST) + timedelta(seconds=next_scan_seconds)
         add_activity_item('SYSTEM', f'⏰ Next scan scheduled for {next_scan_time.strftime("%H:%M:%S EST")} ({next_scan_seconds/60:.0f} minutes)', 'normal')
-        
     except Exception as e:
         dashboard_state['scanning'] = False
         error_msg = sanitize_string(str(e), 200)
@@ -453,7 +446,6 @@ def get_status():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/trigger_scan', methods=['GET', 'POST'])
-@require_api_key
 def trigger_manual_scan():
     """Trigger a manual scan"""
     try:
@@ -481,7 +473,6 @@ def trigger_manual_scan():
         return jsonify({'error': 'Failed to trigger scan'}), 500
 
 @app.route('/api/start_scanner', methods=['GET', 'POST'])
-@require_api_key
 def start_scanner_endpoint():
     """Start the automated scanner"""
     try:
@@ -495,7 +486,6 @@ def start_scanner_endpoint():
         return jsonify({'error': 'Failed to start scanner'}), 500
 
 @app.route('/api/stop_scanner', methods=['GET', 'POST'])
-@require_api_key
 def stop_scanner_endpoint():
     """Stop the automated scanner"""
     try:
@@ -525,7 +515,7 @@ def handle_connect():
             'activity_feed': dashboard_state['activity_feed'],
             'scanner_running': dashboard_state['scanner_running']
         }
-        logger.debug(f"Sending initial_state: {initial_state}")
+        # logger.debug(f"Sending initial_state: {initial_state}")
         emit('initial_state', initial_state)
         add_activity_item('CONNECT', f'Dashboard client connected ({request.sid[:8]})', 'normal')
     except Exception as e:
@@ -569,11 +559,34 @@ if __name__ == '__main__':
     # Start the scanner automatically
     start_scanner()
     try:
-        socketio.run(app, debug=False, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+        socketio.run(app, debug=False, host='0.0.0.0', port=5000)
     except KeyboardInterrupt:
         logger.info("\n🛑 Shutting down...")
         stop_scanner()
         logger.info("SignalSlice stopped. Stay vigilant! 🍕")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -10,7 +10,6 @@ from script.anomalyDetect import check_current_anomalies
 import re
 import requests
 import threading
-
 # Configure logging with UTF-8 encoding
 def setup_logging():
     """Setup logging with UTF-8 encoding to support emojis"""
@@ -32,7 +31,6 @@ def setup_logging():
     # Create formatter
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(formatter)
-    
     logger.addHandler(console_handler)
     return logger
 # Initialize logger with UTF-8 support
@@ -64,7 +62,6 @@ async def hourly_scan():
         current_time = datetime.now(EST)
         print(f"🕐 Starting hourly scan at {current_time.strftime('%Y-%m-%d %H:%M:%S EST')}")
         logger.info(clean_log_message(f"Starting hourly scan at {current_time.strftime('%Y-%m-%d %H:%M:%S EST')}"))
-        
         # Step 1: Scrape current hour data
         logger.info("📡 Scraping current hour data...")
         await scrape_current_hour()
@@ -112,6 +109,30 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

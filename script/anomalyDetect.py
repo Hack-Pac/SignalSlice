@@ -26,7 +26,6 @@ def setup_logging():
 
 # Setup UTF-8 logging
 setup_logging()
-
 def check_current_anomalies():
     """Check for anomalies in the current hour and return True if any found"""
     # Get current time in EST
@@ -91,7 +90,6 @@ def check_current_anomalies():
             if not row["busyness_percent"] or row["busyness_percent"] == "None":
                 logger.info(f"ℹ️ No busyness data available for {row['restaurant_url']} at this hour")
                 continue
-            
             # Validate and convert busyness percentage
             try:
                 current = validate_busyness_percent(row["busyness_percent"])
@@ -135,7 +133,6 @@ def check_current_anomalies():
                 logger.info(f"    📅 {baseline_weekday} {baseline_hour}:00")
                 logger.info(f"    📊 Current: {current}% | Baseline: {expected}% | Δ: +{diff}%")
                 logger.info(f"    🎯 Data type: {data_type}")
-                
                 if has_live_text_flag:
                     logger.info(f"    🚨 LIVE TEXT FLAG detected!")
                 if data_type == "LIVE":
@@ -155,6 +152,52 @@ if __name__ == "__main__":
         logger.error(f"Anomaly detection failed: {e}")
         logger.error(traceback.format_exc())
         sys.exit(2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

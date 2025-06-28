@@ -57,10 +57,8 @@ class SignalSliceMonitor {
         // Hide loading overlay immediately and show main content
         this.hideLoadingOverlay();
         this.updateSystemTime();
-        // Add initial test activity to verify feed is working
-        console.log('Testing activity feed...');
+        // Initialize dashboard
         this.addActivityItem('INIT', 'SignalSlice dashboard loading...', 'normal');
-        this.addActivityItem('TEST', 'Testing activity feed functionality', 'success');
         
         this.initializeChart();
         this.initializeMap();
@@ -97,13 +95,11 @@ class SignalSliceMonitor {
     }    connectToBackend() {
         // Wait for SocketIO to be fully loaded
         if (typeof io === 'undefined') {
-            console.warn('⚠️ SocketIO not loaded yet, retrying in 1 second...');
             setTimeout(() => this.connectToBackend(), 1000);
             return;
         }
         
         try {
-            console.log('Attempting to connect to SocketIO...');
             // Connect to Flask-SocketIO backend
             this.socket = io({
                 transports: ['polling', 'websocket'],
@@ -114,18 +110,15 @@ class SignalSliceMonitor {
             
             // Handle connection events with stored references for cleanup
             const connectHandler = () => {
-                console.log('✅ Successfully connected to SignalSlice backend');
-                console.log('Socket ID:', this.socket.id);
                 this.addActivityItem('CONNECT', 'Connected to real-time data stream', 'success');
             };
             
             const connectErrorHandler = (error) => {
-                console.error('❌ SocketIO connection error:', error);
+                console.error('SocketIO connection error:', error);
                 this.addActivityItem('ERROR', `Connection failed: ${error.message || error}`, 'critical');
             };
             
             const disconnectHandler = () => {
-                console.log('❌ Disconnected from backend');
                 this.addActivityItem('DISCONNECT', 'Connection to data stream lost', 'critical');
             };
             
@@ -142,7 +135,6 @@ class SignalSliceMonitor {
             // Add timeout to detect if connection never happens
             setTimeout(() => {
                 if (!this.socket.connected) {
-                    console.warn('⚠️ SocketIO connection not established after 5 seconds');
                     this.addActivityItem('ERROR', 'Failed to connect to backend - check server status', 'critical');
                 }
             }, 5000);
@@ -175,7 +167,6 @@ class SignalSliceMonitor {
     }
     
     startHttpPolling() {
-        console.log('Starting HTTP polling fallback...');
         this.addActivityItem('FALLBACK', 'Using HTTP polling for updates', 'warning');
         
         // MEMORY OPTIMIZATION: Poll every 15 seconds to reduce memory pressure
@@ -191,29 +182,19 @@ class SignalSliceMonitor {
     }
       async fetchActivityUpdates() {
         try {
-            console.log('Fetching activity updates from API...');
             const response = await fetch('/api/activity_feed');
             const data = await response.json();
             
-            console.log('Received activity data:', data);
-            
             if (data.activity_feed && data.activity_feed.length > 0) {
-                console.log(`Found ${data.activity_feed.length} activity items`);
-                
                 // Check if we have new activities
                 const latestActivity = data.activity_feed[0];
                 if (!this.lastActivityTimestamp || 
                     latestActivity.timestamp !== this.lastActivityTimestamp) {
                     
-                    console.log('Updating activity feed with new data');
                     // Update activity feed with new items
                     this.updateActivityFeedFromData(data.activity_feed);
                     this.lastActivityTimestamp = latestActivity.timestamp;
-                } else {
-                    console.log('No new activity updates');
                 }
-            } else {
-                console.log('No activity data received');
             }
         } catch (error) {
             console.error('Failed to fetch activity updates:', error);
@@ -243,10 +224,6 @@ class SignalSliceMonitor {
     }
     
     handleInitialState(data) {
-        console.log('📡 Received initial state:', data);
-        console.log('📊 Pizza Index from server:', data.pizza_index);
-        console.log('🏳️‍🌈 Gay Bar Index from server:', data.gay_bar_index);
-        
         // Update dashboard with real initial state
         this.pizzaIndex = data.pizza_index;
         this.gayBarIndex = data.gay_bar_index || 6.58;
@@ -254,7 +231,6 @@ class SignalSliceMonitor {
         this.scanCount = data.scan_count;
         this.anomalyCount = data.anomaly_count;
         
-        console.log('🔄 Updating UI elements...');
         // Update UI elements
         this.updatePizzaIndex(this.pizzaIndex);
         this.updateGayBarIndex(this.gayBarIndex);
@@ -264,16 +240,10 @@ class SignalSliceMonitor {
         
         if (scanCountElement) {
             scanCountElement.textContent = this.scanCount;
-            console.log('✅ Updated scan count to:', this.scanCount);
-        } else {
-            console.warn('⚠️ scan-count element not found');
         }
         
         if (anomalyCountElement) {
             anomalyCountElement.textContent = this.anomalyCount;
-            console.log('✅ Updated anomaly count to:', this.anomalyCount);
-        } else {
-            console.warn('⚠️ anomaly-count element not found');
         }
         
         // MEMORY OPTIMIZATION: Load activity feed with limits
@@ -326,7 +296,6 @@ class SignalSliceMonitor {
                 this.chartData.anomalies.splice(0, excess);
             }
         }
-        
         // Clean up DOM elements if activity feed has too many children
         const activityList = document.getElementById('activity-feed');
         if (activityList && activityList.children.length > this.maxActivityItems) {
@@ -349,23 +318,17 @@ class SignalSliceMonitor {
         this.addActivityItemToFeed(activity);
     }
       handlePizzaIndexUpdate(data) {
-        console.log('🍕 Pizza index update received:', data);
-        console.log('Current pizza index:', this.pizzaIndex, '-> New:', data.value);
         this.pizzaIndex = data.value;
         const isAnomaly = data.change > 10 || data.value > 7; // Consider significant changes as anomalies
         this.updatePizzaIndex(this.pizzaIndex, data.change, isAnomaly);
     }
     
     handleGayBarIndexUpdate(data) {
-        console.log('🏳️‍🌈 Gay bar index update received:', data);
-        console.log('Current gay bar index:', this.gayBarIndex, '-> New:', data.value);
         this.gayBarIndex = data.value;
         const isAnomaly = data.change > 10 || data.value > 7;
         this.updateGayBarIndex(this.gayBarIndex, data.change, isAnomaly);
     }
-    
     handleScanStatsUpdate(stats) {
-        console.log('Scan stats update:', stats);
         this.scanCount = stats.scan_count;
         document.getElementById('scan-count').textContent = this.scanCount;
         this.lastScanTime = new Date();
@@ -376,7 +339,6 @@ class SignalSliceMonitor {
     }
     
     handleAnomalyDetected(anomaly) {
-        console.log('Anomaly detected:', anomaly);
         this.anomalyCount = anomaly.anomaly_count;
         document.getElementById('anomaly-count').textContent = this.anomalyCount;
         
@@ -387,7 +349,6 @@ class SignalSliceMonitor {
         }
         // Show critical notification
         this.showNotification(`🚨 ${anomaly.message}`, 'critical');
-        
         // Flash anomaly indicator
         this.flashAnomalyIndicator();
         
@@ -428,11 +389,9 @@ class SignalSliceMonitor {
     
     triggerManualScan() {
         if (this.socket && this.socket.connected) {
-            console.log('Triggering manual scan...');
             this.socket.emit('manual_scan');
             this.addActivityItem('MANUAL', 'Manual scan initiated by user', 'normal');
         } else {
-            console.error('Not connected to backend');
             this.addActivityItem('ERROR', 'Cannot trigger scan - not connected to backend', 'critical');
         }
     }
@@ -454,7 +413,6 @@ class SignalSliceMonitor {
     }    addActivityItemToFeed(activity, animate = true) {
         const activityList = document.getElementById('activity-feed');
         if (!activityList) {
-            console.warn('Activity feed element not found');
             return;
         }
         
@@ -522,7 +480,6 @@ class SignalSliceMonitor {
                 iconColor = '#6b7280';
                 break;
         }
-        
         // Special styling for critical activities
         let borderStyle = '';
         if (activity.level === 'critical') {
@@ -560,7 +517,6 @@ class SignalSliceMonitor {
         contentDiv.className = 'activity-content';
         contentDiv.appendChild(messageDiv);
         contentDiv.appendChild(metaDiv);
-        
         activityElement.appendChild(iconDiv);
         activityElement.appendChild(contentDiv);
           if (borderStyle) {
@@ -661,16 +617,12 @@ class SignalSliceMonitor {
       updatePizzaIndex(value, changePercent = null, isAnomaly = false) {
         // Debounce pizza index updates
         this.debounceUpdate('pizzaIndex', () => {
-            console.log(`🍕 updatePizzaIndex called with value: ${value}, change: ${changePercent}`);
             const element = document.getElementById('pizza-index');
             const changeElement = document.getElementById('pizza-change');
             const cardElement = document.getElementById('pizza-index-card');
             
             if (!element) {
-                console.error('❌ pizza-index element not found in DOM');
                 return;
-            } else {
-                console.log('✅ Found pizza-index element');
             }
             
             const currentValue = parseFloat(element.textContent) || 0;
@@ -722,16 +674,12 @@ class SignalSliceMonitor {
     updateGayBarIndex(value, changePercent = null, isAnomaly = false) {
         // Debounce gay bar index updates
         this.debounceUpdate('gayBarIndex', () => {
-            console.log(`🏳️‍🌈 updateGayBarIndex called with value: ${value}, change: ${changePercent}`);
             const element = document.getElementById('gay-bar-index');
             const changeElement = document.getElementById('gay-bar-change');
             const cardElement = document.getElementById('gay-bar-index-card');
             
             if (!element) {
-                console.error('❌ gay-bar-index element not found in DOM');
                 return;
-            } else {
-                console.log('✅ Found gay-bar-index element');
             }
             
             const currentValue = parseFloat(element.textContent) || 0;
@@ -822,7 +770,6 @@ class SignalSliceMonitor {
     }      initializeChart() {
         const ctx = document.getElementById('realtime-chart');
         if (!ctx) {
-            console.warn('Chart canvas element not found');
             return;
         }
         
@@ -972,7 +919,6 @@ class SignalSliceMonitor {
       initializeMap() {
         const mapElement = document.getElementById('surveillance-map');
         if (!mapElement) {
-            console.warn('Map container element not found');
             return;
         }
         
@@ -1367,7 +1313,6 @@ class SignalSliceMonitor {
     
     // Cleanup method for proper resource disposal
     cleanup() {
-        console.log('Cleaning up SignalSlice resources...');
         
         // Clear all debounce timeouts
         this.debouncedUpdates.forEach(timeoutId => clearTimeout(timeoutId));
@@ -1411,13 +1356,11 @@ class SignalSliceMonitor {
         if (this.chart) {
             this.chart.destroy();
         }
-        
         // Clear map
         if (this.map) {
             this.map.remove();
         }
         
-        console.log('Cleanup complete.');
     }
 }
 
@@ -1461,6 +1404,27 @@ notificationStyles.textContent = `
     }
 `;
 document.head.appendChild(notificationStyles);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

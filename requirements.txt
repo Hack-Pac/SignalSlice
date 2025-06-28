@@ -1,26 +1,10 @@
-# SignalSlice Dependencies
-# Web scraping and automation
-playwright
-
-# Timezone handling
-pytz
-
-# Web framework for real-time dashboard
-flask 
-flask-socketio
-
-# Data processing (included with Python but explicit for clarity)
-# csv - built-in
-# json - built-in
-# os - built-in
-# re - built-in
-# datetime - built-in
-# logging - built-in
-# sys - built-in
-# asyncio - built-in
-# time - built-in
-# random - built-in
-
-# Optional: Data analysis (if you plan to expand)
-# pandas>=2.0.0
-# numpy>=1.24.0
+Flask==3.0.0
+Flask-SocketIO==5.3.5
+python-socketio==5.11.0
+python-dotenv==1.0.0
+pytz==2024.1
+playwright==1.40.0
+asyncio==3.4.3
+requests==2.31.0
+gunicorn==21.2.0
+eventlet==0.33.3

@@ -12,7 +12,7 @@
     --bg-card: #1f2937;
     --text-primary: #f9fafb;
     --text-secondary: #d1d5db;
-    --text-muted: #9ca3af; /* Improved contrast ratio */
+    --text-muted: #9ca3af;
     
     --border-primary: #374151;
     --border-accent: #4b5563;
@@ -22,19 +22,15 @@
     --glow-yellow: rgba(251, 191, 36, 0.3);
 }
 
-/* Performance optimization: reduce * selector scope */
 *, *::before, *::after {
     box-sizing: border-box;
 }
 
-/* Global performance optimizations */
 html {
-    /* Enable GPU acceleration where beneficial */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Optimize reflows by containing layout changes */
 .panel, .card, .container {
     contain: layout style;
 }
@@ -47,10 +43,8 @@ body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
-    /* Removed overflow-x: hidden to reduce reflow */
 }
 
-/* PERFORMANCE: Simplified background - removed heavy animations */
 .surveillance-grid {
     position: fixed;
     top: 0;
@@ -63,29 +57,24 @@ body {
         linear-gradient(90deg, rgba(59, 130, 246, 0.02) 1px, transparent 1px);
     background-size: 50px 50px;
     opacity: 0.2;
-    /* Removed heavy animation */
 }
 
-/* PERFORMANCE: Removed radar sweep animation - very CPU intensive */
 .radar-sweep {
     display: none;
 }
 
-/* Container */
 .container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 20px;
 }
 
-/* Header - Simplified backdrop blur */
 .header {
-    background: rgba(6, 9, 18, 0.98); /* Increased opacity, removed blur */
+    background: rgba(6, 9, 18, 0.98);
     border-bottom: 2px solid var(--border-primary);
     position: sticky;
     top: 0;
     z-index: 1000;
-    /* Removed expensive box-shadow */
 }
 
 .header .container {
@@ -94,7 +83,6 @@ body {
     align-items: center;
     padding: 20px 20px;
 }
-
 .logo {
     display: flex;
     align-items: center;
@@ -106,11 +94,9 @@ body {
     height: 50px;
 }
 
-/* PERFORMANCE: Simplified satellite animation */
 .satellite-svg {
     width: 100%;
     height: 100%;
-    /* Removed continuous rotation animation */
 }
 
 .logo-text h1 {
@@ -120,7 +106,6 @@ body {
     background: linear-gradient(45deg, var(--primary-blue), var(--primary-yellow));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    /* Removed text-shadow for performance */
 }
 .tagline {
     font-size: 0.7rem;
@@ -137,7 +122,6 @@ body {
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 1px;
-    /* Removed box-shadow and animation */
 }
 
 .status-panel {
@@ -159,13 +143,12 @@ body {
     font-weight: 600;
 }
 
-/* PERFORMANCE: Simplified pulse animation */
 .pulse-dot {
     width: 8px;
     height: 8px;
     background: var(--success-green);
     border-radius: 50%;
-    animation: simplePulse 3s ease-in-out infinite; /* Slower, less frequent */
+    animation: simplePulse 3s ease-in-out infinite;
 }
 .pulse-dot.small {
     width: 6px;
@@ -184,12 +167,10 @@ body {
     letter-spacing: 1px;
 }
 
-/* Alert Banner - Simplified */
 .alert-banner {
     background: rgba(251, 191, 36, 0.1);
     border: 1px solid var(--warning-orange);
     border-left: 4px solid var(--warning-orange);
-    /* Removed complex animations */
 }
 
 .alert-content {
@@ -204,19 +185,16 @@ body {
     height: 24px;
 }
 
-/* Stats Grid */
 .stats-grid {
     padding: 30px 0;
-    background: rgba(17, 24, 39, 0.8); /* Removed backdrop-filter blur */
+    background: rgba(17, 24, 39, 0.8);
 }
-
 .stats-grid .container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
 }
 
-/* PERFORMANCE: Simplified stat cards */
 .stat-card {
     background: var(--bg-card);
     border: 1px solid var(--border-primary);
@@ -226,7 +204,7 @@ body {
     align-items: center;
     gap: 20px;
     position: relative;
-    transition: transform 0.2s ease; /* Reduced transitions */
+    transition: transform 0.2s ease;
 }
 
 .stat-card::before {
@@ -248,21 +226,19 @@ body {
 }
 
 .stat-card:hover {
-    transform: translateY(-2px); /* Reduced transform */
+    transform: translateY(-2px);
     border-color: var(--primary-blue);
 }
 
-/* Focus state for interactive stat cards */
 .stat-card:focus-within {
     outline: 2px solid var(--primary-blue);
     outline-offset: 2px;
 }
 
-/* PERFORMANCE: Simplified anomaly animation */
 .stat-card.anomaly-detected {
     background: rgba(239, 68, 68, 0.1);
     border: 2px solid var(--primary-red);
-    animation: simpleAnomalyPulse 2s ease-in-out 2; /* Fewer iterations */
+    animation: simpleAnomalyPulse 2s ease-in-out 2;
 }
 
 @keyframes simpleAnomalyPulse {
@@ -279,7 +255,6 @@ body {
 .stat-icon svg {
     width: 100%;
     height: 100%;
-    /* Removed filter: drop-shadow for performance */
 }
 
 .stat-content {
@@ -290,14 +265,13 @@ body {
     font-size: 2.5rem;
     font-weight: 700;
     line-height: 1;
-    color: var(--text-primary); /* Simplified gradient */
+    color: var(--text-primary);
     font-family: 'Courier New', monospace;
     transition: color 0.2s ease;
 }
 
 .stat-value.anomaly-update {
     color: var(--primary-red);
-    /* Removed animation for performance */
 }
 
 .stat-label {
@@ -344,7 +318,6 @@ body {
     opacity: 0.3;
 }
 
-/* Dashboard Grid */
 .dashboard-grid {
     padding: 40px 0;
 }
@@ -356,7 +329,6 @@ body {
     gap: 30px;
 }
 
-/* Panel Styles - Simplified */
 .activity-panel,
 .chart-panel,
 .map-panel,
@@ -365,7 +337,6 @@ body {
     border: 1px solid var(--border-primary);
     border-radius: 12px;
     padding: 25px;
-    /* Removed overflow hidden and complex transitions */
 }
 
 .activity-panel {
@@ -400,7 +371,6 @@ body {
     color: var(--primary-blue);
 }
 
-/* PERFORMANCE: Optimized Activity Feed */
 .activity-feed {
     max-height: 400px;
     overflow-y: auto;
@@ -416,7 +386,6 @@ body {
     background: var(--bg-card);
     border-radius: 8px;
     border-left: 3px solid var(--border-accent);
-    /* Removed animations and transitions for better scrolling performance */
 }
 
 .activity-item.critical { border-left-color: var(--danger-red); }
@@ -428,7 +397,6 @@ body {
     background: var(--bg-darker);
 }
 
-/* Focus state for activity items if they become interactive */
 .activity-item:focus {
     outline: 2px solid var(--primary-blue);
     outline-offset: -2px;
@@ -447,7 +415,7 @@ body {
 
 .activity-content {
     flex: 1;
-    min-width: 0; /* Prevents flex overflow */
+    min-width: 0;
 }
 
 .activity-message {
@@ -473,7 +441,6 @@ body {
     font-family: 'Courier New', monospace;
 }
 
-/* Chart Container - Simplified */
 .chart-container {
     position: relative;
     height: 300px;
@@ -484,7 +451,6 @@ body {
 
 .chart-container.anomaly-flash {
     border: 2px solid var(--primary-red);
-    /* Removed complex box-shadow animations */
 }
 
 .chart-controls {
@@ -492,7 +458,6 @@ body {
     gap: 10px;
 }
 
-/* Map Container */
 .map-container {
     position: relative;
     height: 400px;
@@ -541,7 +506,6 @@ body {
     transition: width 0.3s ease;
 }
 
-/* Status Grid */
 .status-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -563,8 +527,6 @@ body {
 .status-item:hover {
     background: rgba(59, 130, 246, 0.05);
 }
-
-/* Skip to main content link for accessibility */
 .skip-link {
     position: absolute;
     top: -40px;
@@ -597,7 +559,6 @@ body {
     font-family: 'Courier New', monospace;
 }
 
-/* Pizza Reports Section */
 .pizza-reports-section {
     background: var(--bg-panel);
     padding: 40px 0;
@@ -609,7 +570,6 @@ body {
     justify-content: space-between;
     align-items: center;
 }
-
 .section-header h2 {
     display: flex;
     align-items: center;
@@ -631,7 +591,6 @@ body {
     font-family: 'Courier New', monospace;
 }
 
-/* Twitter Link Container */
 .twitter-link-container {
     background: var(--bg-card);
     border: 1px solid var(--border-primary);
@@ -751,7 +710,6 @@ body {
     font-family: 'Courier New', monospace;
 }
 
-/* Tweet Cards Styling */
 .tweets-list {
     display: flex;
     flex-direction: column;
@@ -860,7 +818,6 @@ body {
     text-decoration: underline;
 }
 
-/* Notification Footer */
 .notification-footer {
     background: var(--bg-panel);
     border-top: 1px solid var(--border-primary);
@@ -872,7 +829,6 @@ body {
     border-radius: 12px;
     margin: 40px 0;
     overflow: hidden;
-    /* Removed ::before pseudo-element animation */
 }
 
 .notification-content {
@@ -914,7 +870,7 @@ body {
 }
 #email-input:focus {
     border-color: var(--primary-blue);
-    outline: none; /* Simplified outline for performance */
+    outline: none;
     transition: border-color 0.15s ease;
 }
 
@@ -944,7 +900,6 @@ body {
     color: var(--text-muted);
 }
 
-/* Button Styles */
 .btn {
     background: var(--bg-card);
     color: var(--text-secondary);
@@ -962,7 +917,6 @@ body {
     border-color: var(--primary-blue);
 }
 
-/* Focus indicators for keyboard navigation */
 .btn:focus,
 button:focus,
 a:focus,
@@ -973,7 +927,6 @@ select:focus {
     outline-offset: 2px;
 }
 
-/* Improve focus visibility on dark backgrounds */
 .btn:focus-visible,
 button:focus-visible,
 a:focus-visible {
@@ -993,7 +946,6 @@ a:focus-visible {
     border-color: var(--primary-blue);
 }
 
-/* Footer */
 .footer-info {
     background: var(--bg-darker);
     border-top: 1px solid var(--border-primary);
@@ -1015,7 +967,6 @@ a:focus-visible {
     font-weight: 700;
 }
 
-/* Loading Overlay - Simplified */
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -1027,7 +978,7 @@ a:focus-visible {
     align-items: center;
     justify-content: center;
     z-index: 9999;
-    contain: strict; /* Full containment for overlay */
+    contain: strict;
     will-change: opacity;
 }
 
@@ -1042,17 +993,15 @@ a:focus-visible {
     margin-bottom: 20px;
 }
 
-/* PERFORMANCE: Simplified radar animation */
 .radar-line {
     transform-origin: 50% 50%;
-    animation: simpleRotate 4s linear infinite; /* Slower rotation */
+    animation: simpleRotate 4s linear infinite;
 }
 
 @keyframes simpleRotate {
     to { transform: rotate(360deg); }
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
 }
@@ -1060,7 +1009,6 @@ a:focus-visible {
 ::-webkit-scrollbar-track {
     background: var(--bg-darker);
 }
-
 ::-webkit-scrollbar-thumb {
     background: var(--border-primary);
     border-radius: 4px;
@@ -1070,7 +1018,6 @@ a:focus-visible {
     background: var(--border-accent);
 }
 
-/* Responsive Design */
 @media (max-width: 1024px) {
     .dashboard-grid .container {
         grid-template-columns: 1fr;
@@ -1102,12 +1049,10 @@ a:focus-visible {
     }
 }
 
-/* Utility Classes */
 .text-critical { color: var(--danger-red); }
 .text-warning { color: var(--warning-orange); }
 .text-success { color: var(--success-green); }
 .text-muted { color: var(--text-muted); }
-
 .update-indicator {
     display: flex;
     align-items: center;
@@ -1116,7 +1061,6 @@ a:focus-visible {
     color: var(--text-muted);
 }
 
-/* Event markers - Simplified */
 .events-list {
     display: flex;
     justify-content: center;
@@ -1146,32 +1090,24 @@ a:focus-visible {
     border-color: var(--success-green);
 }
 
-/* Pattern visualization - Simplified */
 .pattern-viz {
     background: var(--border-primary);
-    /* Removed complex scanning animation */
 }
 
-/* PERFORMANCE: Reduced animation complexity */
 @keyframes flash {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
 
-/* Performance optimized notification styles */
 .notification.critical {
     border-left: 4px solid var(--danger-red);
     background: rgba(239, 68, 68, 0.1);
-    /* Removed complex animations */
 }
 
-/* Optimized loading states */
 .loading-content.scanning {
-    /* Removed complex scanning animations for performance */
     animation: none !important;
 }
 
-/* PERFORMANCE: Media queries for reduced motion */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -1182,14 +1118,12 @@ a:focus-visible {
     }
 }
 
-/* PERFORMANCE: Pause animations when tab is not visible */
 @media (prefers-reduced-motion: no-preference) {
     .pause-animation-offscreen {
         animation-play-state: paused !important;
     }
 }
 
-/* Additional performance optimizations */
 .activity-feed::-webkit-scrollbar {
     will-change: auto;
 }
@@ -1199,145 +1133,3 @@ a:focus-visible {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

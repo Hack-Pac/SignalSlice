@@ -12,7 +12,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from validation import validate_busyness_percent, validate_url, ValidationError
 import logging
-
 # Configure logging
 logger = logging.getLogger(__name__)
 RESTAURANT_URLS = [
@@ -75,12 +74,10 @@ async def scrape_popular_times(page, restaurant_url, index_offset):
             # Debug: print successful extraction
             if i < 5:
                 logger.debug(f"✅ Extracted: {hour_12} {meridiem} -> {hour_24}")
-                
             if day_index >= len(DAYS): 
                 break
             percent_match = re.search(r"(\d+)%", label)
             busyness_percent = int(percent_match.group(1)) if percent_match else None
-
             # Validate busyness percent
             if busyness_percent is not None:
                 try:
@@ -102,7 +99,6 @@ async def scrape_popular_times(page, restaurant_url, index_offset):
             # Skip entries where we can't extract the time
             logger.warning(f"⚠️ Could not extract time from: '{label}'")
             logger.warning(f"   Raw bytes: {repr(label)}")
-
     return structured
 
 async def scrape_current_hour():
@@ -111,7 +107,6 @@ async def scrape_current_hour():
     current_time = datetime.now(EST)
     current_weekday = current_time.strftime('%A')
     current_hour_24 = current_time.hour
-    
     # Adjust for Google Maps' day structure: 12 AM belongs to previous day
     if current_hour_24 == 0:
         target_weekday = (current_time - timedelta(days=1)).strftime('%A')
@@ -147,11 +142,9 @@ async def scrape_current_hour():
                 all_urls.append((validated_url, "gay_bar"))
             except ValidationError as e:
                 print(f"⚠️ Invalid gay bar URL: {e}")
-            
         for url, venue_type in all_urls:
             try:
                 logger.info(f"\n🔍 Checking current hour for: {url} (Type: {venue_type})")
-                
                 await page.goto(url, timeout=60000)
                 await page.wait_for_timeout(4000)
 
@@ -183,7 +176,6 @@ async def scrape_current_hour():
                         flag_emoji = "🚨" if info["flag"] else "✅"
                         logger.info(f"    {flag_emoji} FOUND LIVE TEXT: '{pattern}' (Flag: {info['flag']}, Confidence: {info['confidence']})")
                         break
-                
                 # Look for live percentage data
                 live_percentage_selectors = [
                     '[aria-label*="% busy"], [aria-label*="% Busy"]',
@@ -224,7 +216,6 @@ async def scrape_current_hour():
                                     }
                                     logger.info(f"      🔴 FOUND LIVE PERCENTAGE: {live_percentage}% busy right now!")
                                     break
-                        
                         if live_data:
                             break
                     except Exception as e:
@@ -257,11 +248,9 @@ async def scrape_current_hour():
                         aria = await el.get_attribute('aria-label')
                         if not aria or not re.search(r"\d+% busy", aria):
                             continue
-                        
                         time_match = re.search(r"at (\d{1,2})\u202f(AM|PM)\.?", aria)
                         if not time_match:
                             time_match = re.search(r"at (\d{1,2}) (AM|PM)\.?", aria)
-                        
                         if time_match:
                             hour_12 = int(time_match.group(1))
                             meridiem = time_match.group(2)
@@ -281,7 +270,6 @@ async def scrape_current_hour():
                                     busyness_percent = None
                             else:
                                 busyness_percent = None
-                            
                             data_entry = {
                                 "scrape_timestamp": current_time.isoformat(),
                                 "restaurant_url": url,
@@ -343,7 +331,6 @@ async def scrape_current_hour():
                         # Find today's cycle by looking for the target weekday's position in the week
                         weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
                         current_day_index = weekdays.index(current_weekday)
-                        
                         # Assign days to cycles assuming cycle 0 represents today (Monday)
                         for cycle_idx in range(len(day_cycles)):
                             # Calculate the day offset from today
@@ -355,7 +342,6 @@ async def scrape_current_hour():
                             # Update cycle assignment in scraped data
                             cycle = day_cycles[cycle_idx]
                             cycle_hours = sorted(set(d["display_hour"] for d in cycle))
-                            
                             for data in cycle:
                                 data["detected_cycle"] = cycle_idx
                                 data["cycle_hours_count"] = len(cycle_hours)
@@ -415,7 +401,6 @@ async def scrape_current_hour():
                             
             except Exception as e:
                 logger.info(f"❌ Error scraping {url}: {e}")
-                
             await asyncio.sleep(2)
         await browser.close()
     # Save all scraped data to CSV
@@ -439,7 +424,6 @@ async def scrape_current_hour():
                         data[field] = None
                 writer.writerow(data)
         logger.info(f"📊 All scraped data saved to {scraped_data_file}")
-
     # Save current hour results with data_type field
     current_hour_file = f"data/current_hour_{current_time.strftime('%Y%m%d_%H')}.csv"
     os.makedirs("data", exist_ok=True)
@@ -487,6 +471,65 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
     asyncio.run(main())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

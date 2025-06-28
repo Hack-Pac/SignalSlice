@@ -7,7 +7,6 @@ import asyncio
 import sys
 import os
 import logging
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -15,7 +14,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
-
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scheduler import main
@@ -30,6 +28,29 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"\n❌ Fatal error: {e}", exc_info=True)
         sys.exit(1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

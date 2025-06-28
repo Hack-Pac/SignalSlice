@@ -10,13 +10,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Skip to main content link for keyboard navigation -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    
-    <!-- Animated Grid Background -->
     <div class="surveillance-grid"></div>
     <div class="radar-sweep"></div>
-    <!-- Header with Live Status -->
     <header class="header">
         <div class="container">
             <div class="logo">
@@ -44,7 +40,6 @@
             </div>
         </div>
     </header>
-    <!-- Alert Banner -->
     <div class="alert-banner" id="alert-banner" style="display: none;">
         <div class="container">
             <div class="alert-content">
@@ -62,10 +57,8 @@
         </div>
     </div>
 
-    <!-- Main Dashboard -->
     <main class="main-content" id="main-content">
-        <!-- Critical Stats Grid -->
-        <section class="stats-grid">
+            <section class="stats-grid">
             <div class="container">
                 <div class="stat-card critical" id="pizza-index-card">
                     <div class="stat-icon">
@@ -120,7 +113,6 @@
                         <div class="stat-sublabel">50mi radius</div>
                     </div>
                 </div>
-
                 <div class="stat-card">
                     <div class="stat-icon">
                         <svg viewBox="0 0 40 40" class="scan-icon">
@@ -135,7 +127,6 @@
                         <div class="stat-sublabel" id="scan-frequency">Every 15min</div>
                     </div>
                 </div>
-
                 <div class="stat-card">
                     <div class="stat-icon">
                         <svg viewBox="0 0 40 40" class="anomaly-icon">
@@ -153,10 +144,8 @@
             </div>
         </section>
 
-        <!-- Main Dashboard Grid -->
         <section class="dashboard-grid">
             <div class="container">
-                <!-- Live Activity Feed -->
                 <div class="activity-panel">
                     <div class="panel-header">
                         <h3>
@@ -171,11 +160,9 @@
                         </div>
                     </div>
                     <div class="activity-feed" id="activity-feed" role="log" aria-label="Live activity feed" aria-live="polite">
-                        <!-- Activity items will be populated by JavaScript -->
                     </div>
                 </div>
 
-                <!-- Real-time Chart -->
                 <div class="chart-panel">
                     <div class="panel-header">
                         <h3>
@@ -196,7 +183,6 @@
                     </div>
                 </div>
 
-                <!-- Map Interface -->
                 <div class="map-panel">
                     <div class="panel-header">                        <h3>
                             <svg viewBox="0 0 24 24" class="map-icon">
@@ -229,7 +215,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- System Status -->
                 <div class="status-panel-main">
                     <div class="panel-header">
                         <h3>
@@ -267,7 +252,6 @@
             </div>
         </section>
 
-        <!-- Pizza Reports Section -->
         <section class="pizza-reports-section">
             <div class="container">
                 <div class="section-header">
@@ -310,9 +294,9 @@
             </div>
         </section>
     </main>
-    <!-- Footer Info -->
     <footer class="footer-info">
-            <div class="container">                <div class="footer-content">
+        <div class="container">
+            <div class="footer-content">
                     <div class="footer-left">
                         <p>&copy; 2024 SignalSlice Analytics. All rights reserved.</p>
                         <p>Open source intelligence monitoring system.</p>
@@ -324,189 +308,21 @@
                     </div>
                 </div>
             </div>
-            </div>
         </div>
     </footer>
-
-    <!-- Loading Overlay -->
     <div class="loading-overlay" id="loading-overlay" role="status" aria-live="assertive" aria-label="Loading indicator">
-        <div class="scanning-animation">            <svg viewBox="0 0 100 100" class="radar-svg">
+        <div class="scanning-animation">
+            <svg viewBox="0 0 100 100" class="radar-svg">
                 <circle cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.2"/>
                 <circle cx="50" cy="50" r="35" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.3"/>
                 <circle cx="50" cy="50" r="25" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.4"/>
                 <circle cx="50" cy="50" r="15" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.5"/>
                 <line x1="50" y1="50" x2="50" y2="5" stroke="#3b82f6" stroke-width="2" class="radar-line"/>
             </svg>
-            <p>SCANNING MONITORING ZONE...</p>        </div>    </div>
-    <!-- SocketIO for real-time communication -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
-    
-    <!-- Twitter Widget Script removed - using simple link instead -->
-    
+            <p>SCANNING MONITORING ZONE...</p>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.js"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
