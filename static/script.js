@@ -54,6 +54,9 @@ class SignalSliceMonitor {
         
         this.init();
     }    init() {
+        // Initialize theme first
+        this.initializeTheme();
+        
         // Hide loading overlay immediately and show main content
         this.hideLoadingOverlay();
         this.updateSystemTime();
@@ -1101,15 +1104,6 @@ class SignalSliceMonitor {
             this.domHandlers.set(centerBtn, handler);
         }
         
-        const heatmapBtn = document.getElementById('toggle-heatmap');
-        if (heatmapBtn) {
-            const handler = () => {
-                this.showNotification('Heatmap view toggled', 'info');
-            };
-            heatmapBtn.addEventListener('click', handler);
-            this.domHandlers.set(heatmapBtn, handler);
-        }
-        
           // Add manual scan button to map controls
         const mapControls = document.querySelector('.map-controls');
         if (mapControls) {
@@ -1118,6 +1112,16 @@ class SignalSliceMonitor {
             scanBtn.className = 'btn btn-sm';
             scanBtn.onclick = () => this.triggerManualScan();
             mapControls.appendChild(scanBtn);
+        }
+        
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            const handler = () => {
+                this.toggleTheme();
+            };
+            themeToggle.addEventListener('click', handler);
+            this.domHandlers.set(themeToggle, handler);
         }
     }
     updateChartPeriod(period) {
@@ -1361,6 +1365,49 @@ class SignalSliceMonitor {
             this.map.remove();
         }
         
+    }
+    
+    initializeTheme() {
+        // Load theme preference from localStorage
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        // Update theme toggle icons
+        const sunIcon = document.querySelector('.sun-icon');
+        const moonIcon = document.querySelector('.moon-icon');
+        
+        if (savedTheme === 'light') {
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        } else {
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+        }
+    }
+    
+    toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        document.documentElement.setAttribute('data-theme', newTheme);
+        
+        // Update theme toggle icons
+        const sunIcon = document.querySelector('.sun-icon');
+        const moonIcon = document.querySelector('.moon-icon');
+        
+        if (newTheme === 'light') {
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        } else {
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+        }
+        
+        // Store theme preference
+        localStorage.setItem('theme', newTheme);
+        
+        // Show notification
+        this.showNotification(`Switched to ${newTheme} theme`, 'info');
     }
 }
 

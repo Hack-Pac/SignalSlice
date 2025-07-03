@@ -23,20 +23,20 @@
 }
 
 [data-theme="light"] {
-    --bg-dark: #f3f4f6;
-    --bg-darker: #e5e7eb;
-    --bg-panel: #ffffff;
-    --bg-card: #f9fafb;
-    --text-primary: #111827;
-    --text-secondary: #374151;
-    --text-muted: #6b7280;
+    --bg-dark: #f7f5f1;
+    --bg-darker: #f0ede7;
+    --bg-panel: #faf9f6;
+    --bg-card: #fefdf9;
+    --text-primary: #3d3830;
+    --text-secondary: #5a5347;
+    --text-muted: #8a8070;
     
-    --border-primary: #e5e7eb;
-    --border-accent: #d1d5db;
+    --border-primary: #e8e4dc;
+    --border-accent: #d9d4c8;
     
-    --glow-blue: rgba(59, 130, 246, 0.1);
-    --glow-red: rgba(239, 68, 68, 0.1);
-    --glow-yellow: rgba(251, 191, 36, 0.1);
+    --glow-blue: rgba(59, 130, 246, 0.08);
+    --glow-red: rgba(239, 68, 68, 0.08);
+    --glow-yellow: rgba(251, 191, 36, 0.08);
 }
 
 *, *::before, *::after {
@@ -672,7 +672,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    background: var(--primary-blue);
+    background: #1e40af;
     color: white;
     padding: 14px 28px;
     border-radius: 8px;
@@ -684,9 +684,8 @@ body {
 }
 
 .twitter-follow-button:hover {
-    background: #2563eb;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    background: #1d4ed8;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
 }
 
 .twitter-follow-button:focus {
@@ -1150,62 +1149,83 @@ a:focus-visible {
 /* Light theme specific adjustments */
 [data-theme="light"] .surveillance-grid {
     background-image: 
-        linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+        linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+}
+
+[data-theme="light"] .header {
+    background: rgba(250, 249, 246, 0.95);
+    border-bottom: 2px solid var(--border-primary);
 }
 
 [data-theme="light"] .stat-card {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 [data-theme="light"] .activity-critical {
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(239, 68, 68, 0.06);
+    border-left: 4px solid #d97706;
 }
 
 [data-theme="light"] .chart-container {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 [data-theme="light"] .pulse-dot {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    background: #059669;
+    box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.3);
+}
+
+[data-theme="light"] .live-indicator {
+    background: rgba(5, 150, 105, 0.08);
+    border: 1px solid rgba(5, 150, 105, 0.2);
 }
 
 [data-theme="light"] .classification {
-    background: var(--danger-red);
-    color: white;
+    background: #b45309;
+    color: #fef3c7;
 }
 
-.notification.critical {
-    border-left: 4px solid var(--danger-red);
-    background: rgba(239, 68, 68, 0.1);
+[data-theme="light"] .theme-toggle {
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.loading-content.scanning {
-    animation: none !important;
+[data-theme="light"] .theme-toggle:hover {
+    background: var(--bg-panel);
+    border-color: var(--border-accent);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+[data-theme="light"] .notification {
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .pause-animation-offscreen {
-        animation-play-state: paused !important;
-    }
+[data-theme="light"] .alert-banner {
+    background: rgba(217, 119, 6, 0.08);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+    border-left: 4px solid #d97706;
 }
 
-.activity-feed::-webkit-scrollbar {
-    will-change: auto;
+[data-theme="light"] .twitter-link-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
-.chart-container canvas {
-    will-change: auto;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
+[data-theme="light"] .twitter-follow-button {
+    background: #1e40af;
+    box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
+}
+
+[data-theme="light"] .twitter-follow-button:hover {
+    background: #1d4ed8;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
 }
